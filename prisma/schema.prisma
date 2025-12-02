@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,32 +9,28 @@ datasource db {
 
 // ---------------------------------------------------------
 // MODEL: Store
-// Represents a physical location where customers pick up orders
 // ---------------------------------------------------------
 model Store {
-  id              String      @id @default(uuid()) // Unique ID (e.g., "st_123...")
+  id              String      @id @default(uuid())
   name            String
-  slug            String      @unique // For URL friendly names (e.g., "milan-central")
+  slug            String      @unique
   address         String
   phone           String?
   email           String?
   
-  // Configuration
-  slotDuration    Int         @default(20) // Duration in minutes (15, 20, 30)
-  maxOrdersPerSlot Int        @default(5)  // Capacity management
-  preparationTime Int         @default(60) // Minutes needed before pickup
+  slotDuration    Int         @default(20)
+  maxOrdersPerSlot Int        @default(5)
+  preparationTime Int         @default(60)
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  // Relationships
   timeSlots       TimeSlot[]
   orders          Order[]
 }
 
 // ---------------------------------------------------------
 // MODEL: TimeSlot
-// Specific windows of time available for booking
 // ---------------------------------------------------------
 model TimeSlot {
   id            String    @id @default(uuid())
@@ -45,52 +38,57 @@ model TimeSlot {
   startTime     DateTime
   endTime       DateTime
   
-  // Capacity Logic
-  maxCapacity   Int       // Inherited from Store, but overridable
+  maxCapacity   Int
   bookedCount   Int       @default(0)
   isAvailable   Boolean   @default(true)
 
-  // Relationships
   store         Store     @relation(fields: [storeId], references: [id])
   orders        Order[]
 
-  @@index([storeId, startTime]) // Optimization for searching slots
+  @@index([storeId, startTime])
 }
 
 // ---------------------------------------------------------
 // MODEL: Order
-// Customer orders linked to a specific slot
 // ---------------------------------------------------------
 model Order {
-  id              String    @id @default(uuid())
-  orderNumber     String    @unique // Readable ID like "ORD-001"
+  id              String      @id @default(uuid())
+  orderNumber     String      @unique
   
-  // Customer Info
+  // Dati Cliente
   customerName    String
-  customerEmail   String
+  customerEmail   String?
   customerPhone   String
   
-  // Order Status (PENDING, PREPARING, READY, COMPLETED, CANCELLED)
-  status          String    @default("PENDING")
-  totalAmount     Decimal
+  // Dati Ordine
+  // ATTENZIONE: Il campo si chiama "requestDetails"
+  requestDetails  String      
+  specialNotes    String?
   
-  // Pickup Details
+  // Gestione Prezzo e Stato
+  // FIX: Usiamo String invece di Enum per compatibilità SQLite
+  status          String      @default("PENDING") 
+  estimatedPrice  Decimal?    
+  finalPrice      Decimal?    
+  
+  // Logistica
   storeId         String
   slotId          String
-  pickupTime      DateTime  // Denormalized for easier querying
+  pickupTime      DateTime
   
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  privacyAccepted Boolean     @default(false)
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  // Relationships
-  store           Store     @relation(fields: [storeId], references: [id])
-  slot            TimeSlot  @relation(fields: [slotId], references: [id])
+  store           Store       @relation(fields: [storeId], references: [id])
+  slot            TimeSlot    @relation(fields: [slotId], references: [id])
+  
   items           OrderItem[]
 }
 
 // ---------------------------------------------------------
 // MODEL: OrderItem
-// Individual products within an order
 // ---------------------------------------------------------
 model OrderItem {
   id          String  @id @default(uuid())
