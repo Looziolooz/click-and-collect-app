@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------
+// MODEL: Store
+// Represents a physical location where customers pick up orders
+// ---------------------------------------------------------
+model Store {
+  id              String      @id @default(uuid()) // Unique ID (e.g., "st_123...")
+  name            String
+  slug            String      @unique // For URL friendly names (e.g., "milan-central")
+  address         String
+  phone           String?
+  email           String?
+  
+  // Configuration
+  slotDuration    Int         @default(20) // Duration in minutes (15, 20, 30)
+  maxOrdersPerSlot Int        @default(5)  // Capacity management
+  preparationTime Int         @default(60) // Minutes needed before pickup
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relationships
+  timeSlots       TimeSlot[]
+  orders          Order[]
+}
+
+// ---------------------------------------------------------
+// MODEL: TimeSlot
+// Specific windows of time available for booking
+// ---------------------------------------------------------
+model TimeSlot {
+  id            String    @id @default(uuid())
+  storeId       String
+  startTime     DateTime
+  endTime       DateTime
+  
+  // Capacity Logic
+  maxCapacity   Int       // Inherited from Store, but overridable
+  bookedCount   Int       @default(0)
+  isAvailable   Boolean   @default(true)
+
+  // Relationships
+  store         Store     @relation(fields: [storeId], references: [id])
+  orders        Order[]
+
+  @@index([storeId, startTime]) // Optimization for searching slots
+}
+
+// ---------------------------------------------------------
+// MODEL: Order
+// Customer orders linked to a specific slot
+// ---------------------------------------------------------
+model Order {
+  id              String    @id @default(uuid())
+  orderNumber     String    @unique // Readable ID like "ORD-001"
+  
+  // Customer Info
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  
+  // Order Status (PENDING, PREPARING, READY, COMPLETED, CANCELLED)
+  status          String    @default("PENDING")
+  totalAmount     Decimal
+  
+  // Pickup Details
+  storeId         String
+  slotId          String
+  pickupTime      DateTime  // Denormalized for easier querying
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relationships
+  store           Store     @relation(fields: [storeId], references: [id])
+  slot            TimeSlot  @relation(fields: [slotId], references: [id])
+  items           OrderItem[]
+}
+
+// ---------------------------------------------------------
+// MODEL: OrderItem
+// Individual products within an order
+// ---------------------------------------------------------
+model OrderItem {
+  id          String  @id @default(uuid())
+  orderId     String
+  productName String
+  quantity    Int
+  price       Decimal
+
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
