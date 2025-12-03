@@ -6,43 +6,42 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { storeId, slotId, name, email, phone, items, estimatedTotal } = body;
 
-    console.log("📦 Nuova richiesta ordine:", { customer: name, items: items?.length });
+    console.log("📦 Ordine ricevuto:", { name, items: items?.length });
 
-    // 1. Validazione Dati
-    if (!name || !phone || !items || items.length === 0 || !slotId) {
-      return NextResponse.json({ error: "Dati dell'ordine incompleti o carrello vuoto" }, { status: 400 });
+    // 1. Validazione input
+    if (!items || items.length === 0) {
+      return NextResponse.json({ error: "Il carrello è vuoto" }, { status: 400 });
     }
 
-    // 2. Recupero Negozio (Gestione 'auto_select')
+    // 2. Recupero Negozio (Fallback intelligente)
     let finalStoreId = storeId;
     if (!storeId || storeId === 'auto_select') {
       const store = await prisma.store.findFirst();
       if (!store) {
-        return NextResponse.json({ error: "Nessun negozio configurato nel database" }, { status: 500 });
+        return NextResponse.json({ error: "Errore config: Nessun negozio nel database" }, { status: 500 });
       }
       finalStoreId = store.id;
     }
 
-    // 3. Validazione Slot (Con Fallback di sicurezza)
+    // 3. Recupero Slot (Fallback intelligente)
     let finalSlotId = slotId;
-    const slot = await prisma.timeSlot.findUnique({ where: { id: slotId } });
+    // Se lo slotId è vuoto, finto o non esiste, ne cerchiamo uno valido
+    const slotExists = await prisma.timeSlot.findUnique({ where: { id: slotId || "missing" } });
     
-    if (!slot) {
-      console.warn(`⚠️ Slot ID ${slotId} non trovato. Cerco fallback...`);
-      // Se lo slot scelto non esiste più, prendiamo il primo disponibile futuro per non perdere l'ordine
-      const fallbackSlot = await prisma.timeSlot.findFirst({
-        where: { isAvailable: true, startTime: { gte: new Date() } }
-      });
-      
-      if (!fallbackSlot) {
-        return NextResponse.json({ error: "Nessun orario di ritiro disponibile." }, { status: 400 });
-      }
-      finalSlotId = fallbackSlot.id;
+    if (!slotExists) {
+       console.log("⚠️ Slot non trovato o non valido. Cerco il prossimo disponibile...");
+       const fallbackSlot = await prisma.timeSlot.findFirst({ 
+         where: { isAvailable: true, startTime: { gte: new Date() } } 
+       });
+       
+       if (!fallbackSlot) {
+         return NextResponse.json({ error: "Nessun orario di ritiro disponibile nel sistema." }, { status: 400 });
+       }
+       finalSlotId = fallbackSlot.id;
     }
 
-    // 4. Transazione di Salvataggio
+    // 4. Transazione Database
     const result = await prisma.$transaction(async (tx) => {
-      
       const newOrder = await tx.order.create({
         data: {
           storeId: finalStoreId,
@@ -51,46 +50,37 @@ export async function POST(request: Request) {
           customerEmail: email || "",
           customerPhone: phone,
           status: "PENDING",
-          // Usiamo l'orario dello slot trovato
-          pickupTime: slot ? slot.startTime : new Date(), 
-          
+          pickupTime: new Date(), 
           estimatedTotal: Number(estimatedTotal),
           orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
-          
           items: {
             create: items.map((item: any) => ({
-              // IMPORTANTE: Assicuriamo che i tipi siano corretti
+              // Forziamo i tipi per evitare errori di Prisma
               productId: String(item.id),
               quantity: Number(item.quantity),
-              unit: item.unit,
+              unit: String(item.unit),
               price: Number(item.pricePerKg)
             }))
           }
         },
       });
-
-      // Aggiorna contatore slot (opzionale)
-      await tx.timeSlot.update({
-        where: { id: finalSlotId },
-        data: { bookedCount: { increment: 1 } },
-      });
-
       return newOrder;
     });
 
-    console.log("✅ Ordine creato:", result.orderNumber);
+    console.log("✅ Ordine creato con ID:", result.id);
     return NextResponse.json(result, { status: 201 });
 
   } catch (error: any) {
-    console.error("🔥 ERRORE API:", error);
+    console.error("🔥 ERRORE CRITICO API:", error);
     
-    // Gestione specifica per prodotti vecchi nel carrello (Errore chiave esterna Prisma)
+    // Gestione specifica: Prodotti nel carrello non esistono più nel DB
     if (error.code === 'P2003') {
-        return NextResponse.json({ 
-            error: "Il carrello contiene prodotti non più esistenti (ID obsoleti). Il carrello verrà svuotato." 
-        }, { status: 400 });
+      return NextResponse.json({ 
+        error: "Il carrello contiene prodotti obsoleti (ID non validi). Il carrello verrà svuotato." 
+      }, { status: 400 });
     }
 
+    // Risposta JSON garantita anche in caso di crash
     return NextResponse.json(
       { error: `Errore del server: ${error.message}` }, 
       { status: 500 }
