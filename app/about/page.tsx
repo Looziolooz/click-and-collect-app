@@ -12,10 +12,10 @@ export default function AboutPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
-          <div className="aspect-square rounded-2xl overflow-hidden shadow-xl bg-gray-100">
+            <div className="aspect-square rounded-2xl overflow-hidden shadow-xl bg-gray-100">
              {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/vincenzo-fishmonger-portrait.jpg" className="w-full h-full object-cover" alt="Vincenzo" />
-          </div>
+            <img src="/assets/vincenzo-fishmonger-portrait.png" className="w-full h-full object-cover" alt="Vincenzo Tutino, a master fishmonger, stands confidently in his market setting surrounded by fresh seafood displays. His expression conveys passion and dedication to his craft. The warm, professional portrait captures the pride and expertise he brings to selecting premium quality fish daily." />
+            </div>
           <div className="space-y-6">
             <h2 className="text-3xl font-bold text-gray-900 font-serif">Vincenzo Tutino</h2>
             <p className="text-lg text-gray-600 italic border-l-4 border-brand-yellow pl-4">

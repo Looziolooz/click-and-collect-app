@@ -20,6 +20,7 @@ export default function CartPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 1. Generazione Giorni
   useEffect(() => {
     const days = [];
     const today = new Date();
@@ -27,13 +28,14 @@ export default function CartPage() {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       const dayOfWeek = date.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 1) {
+      if (dayOfWeek !== 0 && dayOfWeek !== 1) { // Escludi Dom/Lun
         days.push(date);
       }
     }
     setAvailableDays(days);
   }, []);
 
+  // 2. Caricamento Slot
   useEffect(() => {
     if (!selectedDate) return;
     async function fetchSlots() {
@@ -41,13 +43,16 @@ export default function CartPage() {
       setSlots([]);
       setFormData(prev => ({ ...prev, slotId: '' }));
       try {
+        console.log("Fetching slots for:", selectedDate);
         const res = await fetch(`/api/slots?date=${selectedDate}`);
         if (res.ok) {
           const data = await res.json();
           setSlots(data);
+        } else {
+          console.error("Errore fetch slots:", await res.text());
         }
       } catch (e) {
-        console.error(e);
+        console.error("Eccezione fetch slots:", e);
       } finally {
         setLoadingSlots(false);
       }
@@ -56,6 +61,7 @@ export default function CartPage() {
   }, [selectedDate]);
 
   const validateField = (name: keyof FormData, value: string): string | undefined => {
+    if (!value) return "Campo obbligatorio"; // Check base per evitare crash su trim()
     switch (name) {
       case 'name': if (value.trim().length < 3) return "Inserisci un nome valido"; break;
       case 'phone': 
@@ -77,28 +83,55 @@ export default function CartPage() {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Tentativo invio ordine...");
+
+    // Validazione
     const newErrors: FormErrors = {};
     let isValid = true;
     (Object.keys(formData) as Array<keyof FormData>).forEach(key => {
       const error = validateField(key, formData[key]);
       if (error) { newErrors[key] = error; isValid = false; }
     });
+    
     if (!selectedDate) { newErrors.date = "Seleziona una data"; isValid = false; }
+    if (!formData.slotId) { newErrors.slotId = "Seleziona un orario"; isValid = false; }
+
     setErrors(newErrors);
-    if (!isValid) return;
+    
+    if (!isValid) {
+      console.log("Validazione fallita:", newErrors);
+      alert("Compila tutti i campi obbligatori (seganti in rosso).");
+      return;
+    }
     
     setIsSubmitting(true);
     try {
+      console.log("Invio dati al server...");
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, storeId: 'auto_select', items: cart.items, estimatedTotal: cart.totalEstimated() })
+        body: JSON.stringify({ 
+          ...formData, 
+          storeId: 'auto_select', 
+          items: cart.items, 
+          estimatedTotal: cart.totalEstimated() 
+        })
       });
-      if (!response.ok) throw new Error("Errore");
+
+      console.log("Risposta server:", response.status);
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Errore Server: ${errText}`);
+      }
+
+      console.log("Ordine successo!");
       cart.clearCart();
       router.push('/booking/success');
+
     } catch (error) {
-      alert("Errore tecnico. Controlla che il DB sia popolato.");
+      console.error("Errore CATCH:", error);
+      alert("Si è verificato un errore tecnico. Controlla la console (F12) per dettagli.");
     } finally {
       setIsSubmitting(false);
     }
@@ -118,8 +151,10 @@ export default function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 lg:grid-cols-12 gap-12 bg-brand-offwhite min-h-screen">
+      
+      {/* RIEPILOGO A SINISTRA */}
       <div className="lg:col-span-4 order-2 lg:order-1">
-        <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-blue-100 sticky top-24">
+        <div className="bg-white shadow-xl rounded-xl overflow-hidden border border-blue-100 sticky top-28">
           <div className="bg-brand-blue p-4 text-white">
             <h2 className="font-bold text-lg flex items-center gap-2">
               <ShoppingCart size={20} className="text-brand-yellow" /> Riepilogo Ordine
@@ -127,7 +162,7 @@ export default function CartPage() {
           </div>
           <div className="max-h-[400px] overflow-y-auto bg-white">
             {cart.items.map((item) => (
-              <div key={item.id} className="flex justify-between items-center p-4 border-b border-gray-100">
+              <div key={item.id} className="flex justify-between items-center p-4 border-b border-gray-50">
                 <div className="flex-1">
                   <h3 className="font-bold text-gray-800 text-sm">{item.name}</h3>
                   <p className="text-xs text-gray-500">€{item.pricePerKg.toFixed(2)} / {item.unit}</p>
@@ -145,40 +180,51 @@ export default function CartPage() {
               <span className="text-blue-200 text-sm">Totale Stimato:</span>
               <span className="text-2xl font-bold text-brand-yellow font-serif">€ {cart.totalEstimated().toFixed(2)}</span>
             </div>
-            <p className="text-[10px] text-blue-300 text-right">* Il prezzo finale sarà al peso reale.</p>
           </div>
         </div>
       </div>
 
+      {/* FORM A DESTRA */}
       <div className="lg:col-span-8 order-1 lg:order-2">
-        <form onSubmit={handleCheckout} className="bg-white p-8 shadow-xl rounded-xl border border-gray-100 space-y-8">
-          <div className="border-b border-gray-100 pb-4">
-            <h1 className="text-3xl font-bold text-brand-blue font-serif">Conferma Ritiro</h1>
-            <p className="text-gray-500 text-sm">Completa i dati per prenotare il tuo pescato.</p>
+        <form onSubmit={handleCheckout} className="bg-white p-8 md:p-10 shadow-xl rounded-2xl border border-gray-100 space-y-10">
+          <div className="border-b border-gray-100 pb-6">
+            <h1 className="text-4xl font-bold text-brand-blue-dark font-serif mb-2">Conferma Ritiro</h1>
+            <p className="text-gray-600 text-lg">Completa i dati per prenotare il tuo pesce fresco.</p>
           </div>
 
-          <section className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span className="bg-brand-blue text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">1</span> I Tuoi Dati
+          <section className="space-y-6">
+            <h3 className="text-xl font-bold text-brand-blue flex items-center gap-3 font-serif">
+              <span className="bg-brand-blue text-brand-yellow w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">1</span> I Tuoi Dati
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input type="text" placeholder="Nome e Cognome *" className={`w-full p-3 border rounded-lg focus:ring-2 outline-none ${errors.name ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:border-brand-blue focus:ring-blue-100'}`} value={formData.name} onChange={e => handleInputChange('name', e.target.value)} />
-              <input type="tel" placeholder="Telefono *" className={`w-full p-3 border rounded-lg focus:ring-2 outline-none ${errors.phone ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:border-brand-blue focus:ring-blue-100'}`} value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} />
-              <input type="email" placeholder="Email *" className={`w-full p-3 border rounded-lg focus:ring-2 outline-none md:col-span-2 ${errors.email ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:border-brand-blue focus:ring-blue-100'}`} value={formData.email} onChange={e => handleInputChange('email', e.target.value)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Nome e Cognome *</label>
+                <input type="text" className={`w-full p-3.5 border rounded-xl outline-none ${errors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} value={formData.name} onChange={e => handleInputChange('name', e.target.value)} />
+                {errors.name && <p className="text-brand-red text-xs font-bold">{errors.name}</p>}
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-700">Telefono *</label>
+                <input type="tel" className={`w-full p-3.5 border rounded-xl outline-none ${errors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} />
+                {errors.phone && <p className="text-brand-red text-xs font-bold">{errors.phone}</p>}
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-bold text-gray-700">Email *</label>
+                <input type="email" className={`w-full p-3.5 border rounded-xl outline-none ${errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'}`} value={formData.email} onChange={e => handleInputChange('email', e.target.value)} />
+                {errors.email && <p className="text-brand-red text-xs font-bold">{errors.email}</p>}
+              </div>
             </div>
           </section>
 
-          <section className="space-y-4 pt-4 border-t border-gray-100">
-            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-              <span className="bg-brand-blue text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">2</span> Giorno di Ritiro
+          <section className="space-y-6 pt-6 border-t border-gray-100">
+            <h3 className="text-xl font-bold text-brand-blue flex items-center gap-3 font-serif">
+              <span className="bg-brand-blue text-brand-yellow w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">2</span> Scegli Giorno
             </h3>
-            {errors.date && <p className="text-brand-red text-sm font-bold">{errors.date}</p>}
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {errors.date && <p className="text-brand-red font-bold text-sm bg-red-50 p-2 rounded">{errors.date}</p>}
+            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
               {availableDays.map((date) => {
                 const dateString = date.toISOString().split('T')[0];
-                const isSelected = selectedDate === dateString;
                 return (
-                  <button key={dateString} type="button" onClick={() => setSelectedDate(dateString)} className={`flex-shrink-0 w-24 h-24 rounded-xl border-2 flex flex-col items-center justify-center transition-all ${isSelected ? 'border-brand-blue bg-blue-50 text-brand-blue shadow-md scale-105' : 'border-gray-200 bg-white text-gray-500 hover:border-brand-blue/50'}`}>
+                  <button key={dateString} type="button" onClick={() => setSelectedDate(dateString)} className={`flex-shrink-0 w-24 h-24 rounded-2xl border-2 flex flex-col items-center justify-center transition-all ${selectedDate === dateString ? 'border-brand-blue bg-brand-blue text-white scale-105' : 'border-gray-200 bg-white text-gray-600'}`}>
                     <span className="text-xs uppercase font-bold">{date.toLocaleDateString('it-IT', { weekday: 'short' })}</span>
                     <span className="text-2xl font-bold font-serif">{date.getDate()}</span>
                     <span className="text-xs">{date.toLocaleDateString('it-IT', { month: 'short' })}</span>
@@ -189,28 +235,29 @@ export default function CartPage() {
           </section>
 
           {selectedDate && (
-            <section className="space-y-4 pt-4 border-t border-gray-100 animate-in fade-in">
-              <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <span className="bg-brand-blue text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">3</span> Orario
+            <section className="space-y-6 pt-6 border-t border-gray-100 animate-in fade-in">
+              <h3 className="text-xl font-bold text-brand-blue flex items-center gap-3 font-serif">
+                <span className="bg-brand-blue text-brand-yellow w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shadow-sm">3</span> Scegli Orario
               </h3>
-              {loadingSlots ? <div className="text-brand-blue font-medium animate-pulse">Caricamento orari...</div> : (
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                  {slots.map((slot) => {
+              {loadingSlots ? <div className="text-brand-blue animate-pulse">Caricamento orari...</div> : (
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                  {slots.length === 0 ? <p className="col-span-full text-gray-500">Nessun orario per questa data.</p> : slots.map((slot) => {
                     const timeString = new Date(slot.startTime).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
                     return (
-                      <button key={slot.id} type="button" onClick={() => handleInputChange('slotId', slot.id)} className={`py-2 px-1 rounded-lg text-sm font-bold border transition-all ${formData.slotId === slot.id ? 'bg-brand-blue text-white border-brand-blue shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:border-brand-blue'}`}>
+                      <button key={slot.id} type="button" onClick={() => handleInputChange('slotId', slot.id)} className={`py-3 rounded-xl text-sm font-bold border-2 transition-all ${formData.slotId === slot.id ? 'bg-brand-yellow text-brand-blue border-brand-blue' : 'bg-white text-gray-600 border-gray-200 hover:border-brand-blue'}`}>
                         {timeString}
                       </button>
                     );
                   })}
                 </div>
               )}
+              {errors.slotId && <p className="text-brand-red text-sm font-bold">{errors.slotId}</p>}
             </section>
           )}
 
-          <div className="pt-6 mt-6 border-t border-gray-200">
-            <button type="submit" disabled={isSubmitting} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg flex justify-center items-center gap-2 transition-all ${isSubmitting ? 'bg-gray-300 text-gray-500' : 'bg-brand-yellow text-brand-blue-dark hover:bg-yellow-400 hover:scale-[1.01]'}`}>
-              {isSubmitting ? "Elaborazione..." : <><CheckCircle /> CONFERMA (Paga al Ritiro)</>}
+          <div className="pt-8 mt-8 border-t border-gray-100">
+            <button type="submit" disabled={isSubmitting} className={`w-full py-4.5 rounded-xl font-bold text-xl shadow-lg flex justify-center items-center gap-3 transition-all ${isSubmitting ? 'bg-gray-300' : 'bg-brand-yellow text-brand-blue-dark hover:bg-yellow-400 hover:-translate-y-1'}`}>
+              {isSubmitting ? "Elaborazione..." : <><CheckCircle /> CONFERMA ORDINE</>}
             </button>
           </div>
         </form>
