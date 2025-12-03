@@ -1,185 +1,43 @@
-"use client";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Printer, Check, Clock, User, Phone } from 'lucide-react';
-
-export default function ManageOrderPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [order, setOrder] = useState<any>(null);
-  const [finalPrice, setFinalPrice] = useState<string>("");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    // Carica i dati dell'ordine
-    fetch(`/api/admin/orders/${params.id}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Ordine non trovato");
-        return res.json();
-      })
-      .then(data => {
-        setOrder(data);
-        // Pre-compila il prezzo finale se esiste, altrimenti usa quello stimato
-        setFinalPrice(data.finalTotal || data.estimatedTotal);
-      })
-      .catch(() => router.push('/admin/dashboard'));
-  }, [params.id, router]);
-
-  const handleUpdateOrder = async (newStatus: string) => {
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/admin/orders/${params.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: newStatus,
-          finalTotal: parseFloat(finalPrice)
-        })
-      });
-      
-      if (res.ok) {
-        const updated = await res.json();
-        setOrder(updated);
-        alert("Ordine aggiornato con successo!");
+// GET: Legge un singolo ordine
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: params.id },
+      include: { 
+        items: { 
+          include: { product: true } 
+        },
+        slot: true
       }
-    } catch (e) {
-      alert("Errore durante l'aggiornamento");
-    } finally {
-      setSaving(false);
-    }
-  };
+    });
 
-  if (!order) return <div className="p-20 text-center text-brand-blue font-bold animate-pulse">Caricamento scheda ordine...</div>;
+    if (!order) return NextResponse.json({ error: "Non trovato" }, { status: 404 });
 
-  return (
-    <div className="min-h-screen bg-brand-offwhite p-6">
-      <div className="max-w-5xl mx-auto">
-        
-        {/* Pulsante Indietro */}
-        <button onClick={() => router.back()} className="flex items-center text-gray-500 hover:text-brand-blue mb-6 font-medium transition-colors">
-          <ArrowLeft size={20} className="mr-2" /> Torna alla Dashboard
-        </button>
+    return NextResponse.json(order);
+  } catch (error) {
+    return NextResponse.json({ error: "Errore server" }, { status: 500 });
+  }
+}
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
-          
-          {/* Header Ordine (Blu Brand) */}
-          <div className="bg-brand-blue p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold font-serif">Ordine #{order.orderNumber}</h1>
-                <span className="bg-brand-yellow text-brand-blue px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-                  {order.status}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:gap-6 text-blue-100 text-sm">
-                <span className="flex items-center gap-2"><User size={16}/> {order.customerName}</span>
-                <span className="flex items-center gap-2"><Phone size={16}/> {order.customerPhone}</span>
-                <span className="flex items-center gap-2"><Clock size={16}/> Ritiro: {new Date(order.pickupTime).toLocaleString('it-IT')}</span>
-              </div>
-            </div>
-            
-            <div className="text-right bg-white/10 p-4 rounded-lg backdrop-blur-sm">
-              <div className="text-xs text-blue-200 uppercase tracking-wide mb-1">Totale Stimato</div>
-              <div className="text-2xl font-bold font-serif">€ {Number(order.estimatedTotal).toFixed(2)}</div>
-            </div>
-          </div>
+// PUT: Aggiorna stato e prezzo
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const body = await request.json();
+    const { status, finalTotal } = body;
 
-          <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* COLONNA SX: Lista Prodotti */}
-            <div className="lg:col-span-2 space-y-6">
-              <h2 className="text-xl font-bold text-gray-800 border-b pb-4 flex items-center gap-2">
-                <span className="bg-blue-100 text-brand-blue w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
-                Lista da Preparare
-              </h2>
-              
-              <div className="space-y-3">
-                {order.items.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors">
-                    <div className="flex items-center gap-4">
-                      {/* Pallino quantità */}
-                      <div className="h-10 w-10 bg-brand-blue text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md">
-                        {item.quantity}
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-900 text-lg">{item.product.name}</div>
-                        <div className="text-sm text-gray-500 font-medium">{item.unit} x € {Number(item.price).toFixed(2)}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold text-gray-700 text-lg">
-                        € {(Number(item.price) * Number(item.quantity)).toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+    const updatedOrder = await prisma.order.update({
+      where: { id: params.id },
+      data: {
+        status,
+        finalTotal: Number(finalTotal),
+      }
+    });
 
-              {/* Note Cliente */}
-              {order.specialNotes && (
-                <div className="bg-yellow-50 p-6 rounded-xl border border-brand-yellow/30 text-yellow-900">
-                  <strong className="block text-brand-blue-dark mb-1">📝 Nota del Cliente:</strong> 
-                  {order.specialNotes}
-                </div>
-              )}
-            </div>
-
-            {/* COLONNA DX: Azioni (La Bilancia) */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="bg-blue-50 p-6 rounded-xl border border-blue-100">
-                <h2 className="text-xl font-bold text-gray-800 border-b border-blue-200 pb-4 flex items-center gap-2 mb-4">
-                  <span className="bg-brand-blue text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
-                  Cassa & Peso
-                </h2>
-
-                <label className="block text-sm font-bold text-brand-blue mb-2 uppercase tracking-wide">
-                  Totale Reale (€)
-                </label>
-                <div className="flex items-center bg-white rounded-xl border-2 border-brand-blue overflow-hidden shadow-sm focus-within:ring-4 ring-blue-100 transition-all">
-                  <span className="pl-4 text-2xl text-gray-400 font-serif">€</span>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    value={finalPrice}
-                    onChange={(e) => setFinalPrice(e.target.value)}
-                    className="w-full text-3xl font-bold text-gray-900 p-3 outline-none font-serif"
-                    placeholder="0.00"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2 leading-tight">
-                  Inserisci qui il prezzo finale dopo aver pesato la merce sulla bilancia.
-                </p>
-              </div>
-
-              <div className="space-y-3 pt-2">
-                <button 
-                  onClick={() => handleUpdateOrder('READY')}
-                  disabled={saving}
-                  className="w-full bg-brand-blue hover:bg-brand-blue-light text-white py-4 rounded-xl font-bold shadow-lg flex justify-center items-center gap-2 transition-all hover:-translate-y-1"
-                >
-                  <Save size={20} />
-                  {saving ? 'Salvataggio...' : 'Conferma e Notifica'}
-                </button>
-
-                <button 
-                  onClick={() => handleUpdateOrder('COMPLETED')}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-colors"
-                >
-                  <Check size={20} /> Segna come Ritirato
-                </button>
-
-                <button 
-                  onClick={() => window.print()}
-                  className="w-full bg-white border-2 border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 hover:text-brand-blue hover:border-brand-blue transition-all flex justify-center items-center gap-2"
-                >
-                  <Printer size={20} /> Stampa Comanda
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    return NextResponse.json(updatedOrder);
+  } catch (error) {
+    return NextResponse.json({ error: "Errore aggiornamento" }, { status: 500 });
+  }
 }
