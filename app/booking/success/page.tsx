@@ -24,7 +24,7 @@ export default function SuccessPage() {
           </ol>
         </div>
 
-        <Link href="/" className="block w-full bg-charcoal text-white font-medium py-3 rounded-lg hover:bg-sage transition-colors">
+        <Link href="/" className="block w-full bg-charcoal text-black font-medium py-3 rounded-lg hover:bg-sage transition-colors">
           Torna alla Home
         </Link>
       </div>
