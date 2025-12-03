@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider = "postgresql"  // <--- CAMBIATO DA sqlite A postgresql
+  url      = env("POSTGRES_PRISMA_URL") // URL per le connessioni normali (pooling)
+  directUrl = env("POSTGRES_URL_NON_POOLING") // URL diretto per le migrazioni
 }
 
 model Store {
