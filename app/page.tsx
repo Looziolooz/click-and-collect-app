@@ -3,11 +3,13 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import Link from 'next/link'; 
 import { ArrowRight, Award, Users, Clock } from 'lucide-react';
 import { prisma } from "@/lib/prisma";
+// Importa il tipo Product (ora funzionerà dopo npx prisma generate)
+import { Product } from "@prisma/client";
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // Prendi i primi 3 prodotti disponibili per la vetrina
+  // Recupera i prodotti disponibili
   const products = await prisma.product.findMany({ 
     where: { isAvailable: true },
     take: 3,
@@ -30,14 +32,16 @@ export default async function Home() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {products.map((p) => (
+            {/* Mappiamo i prodotti tipizzando 'p' come Product */}
+            {products.map((p: Product) => (
               <ProductCard 
                 key={p.id} 
                 id={p.id}
                 name={p.name}
                 description={p.description}
-                image={p.image}
-                pricePerKg={Number(p.pricePerKg)} // Conversione Decimal -> Number
+                image={p.image || ""}
+                // Importante: Convertiamo il Decimal di Prisma in Number
+                pricePerKg={Number(p.pricePerKg)} 
                 unit={p.unit}
                 category={p.category}
                 isAvailable={true}

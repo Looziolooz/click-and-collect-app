@@ -61,7 +61,7 @@ export function Hero() {
             <div className="aspect-square rounded-full overflow-hidden shadow-[0_20px_50px_rgba(0,_0,_0,_0.3)] border-8 border-white/30 relative z-10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/assets/hero-fish-market-display.jpg"
+                src="/assets/hero-fish-market-display.png"
                 alt="Banco del pesce fresco"
                 className="w-full h-full object-cover scale-110 hover:scale-100 transition-transform duration-1000 ease-out"
               />
