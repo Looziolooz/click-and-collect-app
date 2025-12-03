@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET: Legge un singolo ordine con tutti i dettagli
+// GET: Legge un singolo ordine
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const order = await prisma.order.findUnique({
@@ -32,12 +32,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       where: { id: params.id },
       data: {
         status,
-        finalTotal: Number(finalTotal), // Assicuriamoci che sia un numero
+        finalTotal: Number(finalTotal),
       }
     });
-
-    // Qui in futuro potremo aggiungere l'invio automatico dell'SMS/Email
-    // if (status === 'READY') { ... sendEmail(updatedOrder.customerEmail) ... }
 
     return NextResponse.json(updatedOrder);
   } catch (error) {
