@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Printer, Check, Clock, User, Phone, AlertCircle } from 'lucide-react';
 
-export default function ManageOrderPage({ params }: { params: { id: string } }) {
+// Nota: params ora contiene 'orderId' invece di 'id'
+export default function ManageOrderPage({ params }: { params: { orderId: string } }) {
   const router = useRouter();
   const [order, setOrder] = useState<any>(null);
   const [finalPrice, setFinalPrice] = useState<string>("");
@@ -12,10 +13,10 @@ export default function ManageOrderPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Chiamata all'API che abbiamo appena creato sopra
-    fetch(`/api/admin/orders/${params.id}`)
+    // Usiamo params.orderId nell'URL dell'API
+    fetch(`/api/admin/orders/${params.orderId}`)
       .then(res => {
-        if (!res.ok) throw new Error("Errore caricamento");
+        if (!res.ok) throw new Error("Ordine non trovato");
         return res.json();
       })
       .then(data => {
@@ -26,15 +27,16 @@ export default function ManageOrderPage({ params }: { params: { id: string } }) 
       })
       .catch((err) => {
         console.error(err);
-        alert("Impossibile trovare l'ordine.");
+        alert("Impossibile trovare l'ordine specificato.");
         router.push('/admin/dashboard');
       });
-  }, [params.id, router]);
+  }, [params.orderId, router]);
 
   const handleUpdateOrder = async (newStatus: string) => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/orders/${params.id}`, {
+      // Usiamo params.orderId per la PUT
+      const res = await fetch(`/api/admin/orders/${params.orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,11 +117,12 @@ export default function ManageOrderPage({ params }: { params: { id: string } }) 
                 {order.items.map((item: any) => (
                   <div key={item.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors">
                     <div className="flex items-center gap-4">
+                      {/* Pallino quantità */}
                       <div className="h-10 w-10 bg-brand-blue text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md">
                         {item.quantity}
                       </div>
                       <div>
-                        <div className="font-bold text-gray-900 text-lg">{item.product?.name || "Prodotto non disponibile"}</div>
+                        <div className="font-bold text-gray-900 text-lg">{item.product?.name || "Prodotto rimosso"}</div>
                         <div className="text-sm text-gray-500 font-medium">{item.unit} x € {Number(item.price).toFixed(2)}</div>
                       </div>
                     </div>
