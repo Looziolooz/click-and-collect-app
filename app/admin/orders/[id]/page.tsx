@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Printer, Check, Clock, User, Phone, AlertCircle } from 'lucide-react';
 
-// Nota: params ora contiene 'orderId' invece di 'id'
-export default function ManageOrderPage({ params }: { params: { orderId: string } }) {
+// Aggiornata l'interfaccia per usare 'id'
+export default function ManageOrderPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [order, setOrder] = useState<any>(null);
   const [finalPrice, setFinalPrice] = useState<string>("");
@@ -13,15 +13,14 @@ export default function ManageOrderPage({ params }: { params: { orderId: string 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Usiamo params.orderId nell'URL dell'API
-    fetch(`/api/admin/orders/${params.orderId}`)
+    // Ora usiamo correttamente params.id che corrisponde al nome della cartella [id]
+    fetch(`/api/admin/orders/${params.id}`)
       .then(res => {
         if (!res.ok) throw new Error("Ordine non trovato");
         return res.json();
       })
       .then(data => {
         setOrder(data);
-        // Se c'è già un prezzo finale salvato, usalo. Altrimenti usa quello stimato.
         setFinalPrice(data.finalTotal || data.estimatedTotal);
         setLoading(false);
       })
@@ -30,13 +29,12 @@ export default function ManageOrderPage({ params }: { params: { orderId: string 
         alert("Impossibile trovare l'ordine specificato.");
         router.push('/admin/dashboard');
       });
-  }, [params.orderId, router]);
+  }, [params.id, router]);
 
   const handleUpdateOrder = async (newStatus: string) => {
     setSaving(true);
     try {
-      // Usiamo params.orderId per la PUT
-      const res = await fetch(`/api/admin/orders/${params.orderId}`, {
+      const res = await fetch(`/api/admin/orders/${params.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -71,7 +69,6 @@ export default function ManageOrderPage({ params }: { params: { orderId: string 
     <div className="min-h-screen bg-brand-offwhite p-6">
       <div className="max-w-5xl mx-auto">
         
-        {/* Pulsante Indietro */}
         <button onClick={() => router.back()} className="flex items-center text-gray-500 hover:text-brand-blue mb-6 font-medium transition-colors">
           <ArrowLeft size={20} className="mr-2" /> Torna alla Dashboard
         </button>
@@ -117,7 +114,6 @@ export default function ManageOrderPage({ params }: { params: { orderId: string 
                 {order.items.map((item: any) => (
                   <div key={item.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors">
                     <div className="flex items-center gap-4">
-                      {/* Pallino quantità */}
                       <div className="h-10 w-10 bg-brand-blue text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md">
                         {item.quantity}
                       </div>
@@ -135,7 +131,6 @@ export default function ManageOrderPage({ params }: { params: { orderId: string 
                 ))}
               </div>
 
-              {/* Note Cliente */}
               {order.specialNotes && (
                 <div className="bg-yellow-50 p-6 rounded-xl border border-brand-yellow/30 text-yellow-900 mt-6 flex items-start gap-3">
                   <AlertCircle className="text-brand-yellow mt-1 flex-shrink-0" />
