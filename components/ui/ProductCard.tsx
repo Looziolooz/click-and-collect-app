@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { ShoppingBasket, Check, Info } from 'lucide-react';
+import Image from 'next/image';
 
 // DEFINTIZIONE MANUALE DELLE PROPS
 // Disaccoppiamo il componente dal tipo Prisma per evitare conflitti Decimal/number
@@ -37,10 +38,12 @@ export function ProductCard({ id, name, description, image, pricePerKg, unit, ca
     <div className={`bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border ${isAvailable ? 'border-blue-50' : 'border-gray-200 opacity-75'} flex flex-col h-full group`}>
       <div className="aspect-[4/3] relative overflow-hidden bg-gray-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img 
+        <Image
           src={image || "/assets/placeholder.jpg"} 
           alt={name} 
           className={`w-full h-full object-cover transition-transform duration-700 ${isAvailable ? 'group-hover:scale-110' : 'grayscale'}`} 
+          width={400}
+          height={300}
         />
         
         {isAvailable && (
