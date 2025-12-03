@@ -77,7 +77,7 @@ export default function CartPage() {
         if (cleanNumber.length < 9) return "Numero non valido (min 9 cifre)"; 
         break;
       case 'email': 
-        // Regex email semplice ma efficace
+        // Regex email semplice
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Email non valida"; 
         break;
       case 'slotId': 
@@ -128,12 +128,20 @@ export default function CartPage() {
         })
       });
 
-      const data = await response.json();
+      // Leggiamo la risposta in modo sicuro
+      const responseText = await response.text();
+      let data;
+      try {
+          data = responseText ? JSON.parse(responseText) : {};
+      } catch (e) {
+          console.error("Risposta non JSON:", responseText);
+          throw new Error("Il server ha restituito una risposta non valida.");
+      }
 
       if (!response.ok) {
-        // Gestione errore "Carrello Vecchio"
-        if (data.error && data.error.includes("prodotti non più esistenti")) {
-            alert("⚠️ Il tuo carrello contiene prodotti scaduti o non validi. Il carrello verrà svuotato per sicurezza.");
+        // Gestione errore "Carrello Vecchio / ID non trovati"
+        if (data.error && (data.error.includes("prodotti non più esistenti") || data.error.includes("Foreign key constraint"))) {
+            alert("⚠️ Il tuo carrello contiene prodotti scaduti (ID obsoleti). Il carrello verrà svuotato per permetterti di rifare l'ordine.");
             cart.clearCart();
             router.push('/products');
             return;
