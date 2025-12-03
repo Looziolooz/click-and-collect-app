@@ -2,17 +2,23 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation'; // Importa usePathname
 import { Fish, Menu, X, ShoppingCart } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useCart } from '@/hooks/use-cart';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const pathname = usePathname();
+  const pathname = usePathname(); // Hook per il percorso
   const isMobile = useIsMobile();
   const cart = useCart();
   const [mounted, setMounted] = useState(false);
+
+  // SE SIAMO IN AREA ADMIN, NON MOSTRARE QUESTO HEADER
+  // Questo impedisce che l'header del cliente appaia sopra quello dell'admin
+  if (pathname && pathname.startsWith('/admin')) {
+    return null;
+  }
 
   useEffect(() => setMounted(true), []);
   useEffect(() => { if (!isMobile) setIsMenuOpen(false); }, [isMobile]);
