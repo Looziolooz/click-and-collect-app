@@ -1,24 +1,15 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import { Header } from "@/components/layout/Header"; // Importa il nuovo header
+import { Footer } from "@/components/layout/Footer"; // Importa il nuovo footer
 
-// Configure the Inter font (Sans Serif) for body text
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-// Configure Playfair Display (Serif) for headings
-const playfair = Playfair_Display({
-  subsets: ["latin"],
-  variable: "--font-playfair",
-  display: "swap",
-});
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
 
 export const metadata: Metadata = {
-  title: "Click & Collect System",
-  description: "In-Store Pickup Scheduling System",
+  title: "Pescheria Fresco&Fresco",
+  description: "Pesce fresco a Lamezia Terme da Vincenzo Tutino",
 };
 
 export default function RootLayout({
@@ -27,10 +18,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      {/* Apply both font variables to the body so Tailwind can access them */}
-      <body className={`${inter.variable} ${playfair.variable} antialiased`}>
-        {children}
+    <html lang="it">
+      <body className={`${inter.variable} ${playfair.variable} font-sans flex flex-col min-h-screen bg-slate-50`}>
+        <Header />
+        <main className="flex-grow">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );
