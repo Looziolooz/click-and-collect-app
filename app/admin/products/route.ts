@@ -3,13 +3,11 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = 'force-dynamic';
 
-// GET: Lista prodotti
 export async function GET() {
   const products = await prisma.product.findMany({ orderBy: { category: 'asc' } });
   return NextResponse.json(products);
 }
 
-// POST: Crea nuovo prodotto
 export async function POST(request: Request) {
   try {
     const body = await request.json();
