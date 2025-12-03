@@ -30,7 +30,7 @@ async function main() {
     { name: "Orata", description: "Orata fresca del Mediterraneo.", pricePerKg: 18.50, unit: "kg", category: "premium", image: "/assets/fresh-sea-bass-bream.jpg" },
     { name: "Branzino", description: "Branzino fresco di prima qualità.", pricePerKg: 22.00, unit: "kg", category: "premium", image: "/assets/fresh-sea-bass-bream.jpg" },
     { name: "Sardine", description: "Sardine fresche del Tirreno.", pricePerKg: 8.00, unit: "kg", category: "blue", image: "/assets/blue-fish-selection.jpg" },
-    { name: "Cozze", description: "Cozze fresche pulite.", pricePerKg: 4.50, unit: "kg", category: "shellfish", image: "/assets/seafood-shellfish-display.jpg" },
+    { name: "Cozze", description: "Cozze fresche pulite.", pricePerKg: 4.50, unit: "kg", category: "shellfish", image: "/assets/seafood-shellfish-display_variant_1.png" },
     { name: "Gamberi Rossi", description: "Gamberi rossi locali.", pricePerKg: 45.00, unit: "kg", category: "shellfish", image: "/assets/seafood-shellfish-display.jpg" },
     { name: "Pesce Spada", description: "Trancio di pesce spada fresco.", pricePerKg: 28.00, unit: "kg", category: "premium", image: "/assets/fresh-sea-bass-bream.jpg" },
   ]

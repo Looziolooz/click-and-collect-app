@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Clock, Award, Users, ArrowRight } from 'lucide-react';
 
 export function Hero() {
@@ -60,8 +61,8 @@ export function Hero() {
           <div className="relative lg:mt-0 mt-12">
             <div className="aspect-square rounded-full overflow-hidden shadow-[0_20px_50px_rgba(0,_0,_0,_0.3)] border-8 border-white/30 relative z-10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/assets/hero-fish-market-display.png"
+              <Image
+                src="/assets/hero-vincenzo.png"
                 alt="Banco del pesce fresco"
                 className="w-full h-full object-cover scale-110 hover:scale-100 transition-transform duration-1000 ease-out"
               />
