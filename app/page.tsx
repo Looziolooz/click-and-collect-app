@@ -4,26 +4,35 @@ import Link from 'next/link'; // NEXT.JS usa questo, non react-router-dom
 import { ArrowRight, Award, Users, Clock } from 'lucide-react';
 
 export default function Home() {
-  const featuredProducts = [
+ const featuredProducts = [
     {
+      id: "promo_orata", // <--- AGGIUNTO ID
       name: "Orata Fresca",
-      description: "Orata del Mediterraneo, pescata del giorno. Ideale per cotture al forno o alla griglia.",
+      description: "Orata del Mediterraneo, pescata del giorno.",
       image: "/assets/fresh-sea-bass-bream.jpg",
       category: "Pesce Pregiato",
+      pricePerKg: 18.50, // <--- AGGIUNTO PREZZO
+      unit: "kg",        // <--- AGGIUNTA UNITÀ
       availability: "available" as const
     },
     {
+      id: "promo_azzurro", // <--- AGGIUNTO ID
       name: "Pesce Azzurro",
-      description: "Selezione di sardine, alici e sgombri freschi. Ricchi di omega-3 e dal sapore autentico.",
+      description: "Selezione di sardine, alici e sgombri freschi.",
       image: "/assets/blue-fish-selection.jpg",
       category: "Pesce Azzurro",
+      pricePerKg: 9.00,  // <--- AGGIUNTO PREZZO
+      unit: "kg",        // <--- AGGIUNTA UNITÀ
       availability: "available" as const
     },
     {
+      id: "promo_molluschi", // <--- AGGIUNTO ID
       name: "Frutti di Mare",
-      description: "Cozze, vongole, polpi e seppie fresche. Perfetti per zuppe e primi piatti.",
+      description: "Cozze, vongole, polpi e seppie fresche.",
       image: "/assets/seafood-shellfish-display.jpg",
       category: "Molluschi",
+      pricePerKg: 12.00, // <--- AGGIUNTO PREZZO
+      unit: "kg",        // <--- AGGIUNTA UNITÀ
       availability: "limited" as const
     }
   ];

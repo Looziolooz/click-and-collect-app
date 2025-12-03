@@ -7,9 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---------------------------------------------------------
-// MODEL: Store
-// ---------------------------------------------------------
 model Store {
   id              String      @id @default(uuid())
   name            String
@@ -17,85 +14,76 @@ model Store {
   address         String
   phone           String?
   email           String?
-  
   slotDuration    Int         @default(20)
   maxOrdersPerSlot Int        @default(5)
   preparationTime Int         @default(60)
-  
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
-
   timeSlots       TimeSlot[]
   orders          Order[]
 }
 
-// ---------------------------------------------------------
-// MODEL: TimeSlot
-// ---------------------------------------------------------
 model TimeSlot {
   id            String    @id @default(uuid())
   storeId       String
   startTime     DateTime
   endTime       DateTime
-  
   maxCapacity   Int
   bookedCount   Int       @default(0)
   isAvailable   Boolean   @default(true)
-
   store         Store     @relation(fields: [storeId], references: [id])
   orders        Order[]
-
   @@index([storeId, startTime])
 }
 
-// ---------------------------------------------------------
-// MODEL: Order
-// ---------------------------------------------------------
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  pricePerKg  Decimal
+  unit        String   @default("kg")
+  category    String
+  image       String?
+  isAvailable Boolean  @default(true)
+  orderItems  OrderItem[]
+}
+
 model Order {
   id              String      @id @default(uuid())
   orderNumber     String      @unique
-  
-  // Dati Cliente
   customerName    String
   customerEmail   String?
   customerPhone   String
   
-  // Dati Ordine
-  // ATTENZIONE: Il campo si chiama "requestDetails"
-  requestDetails  String      
+  // Campi vecchi (opzionali per non rompere il codice vecchio)
+  requestDetails  String?     
   specialNotes    String?
+
+  // Campi nuovi
+  status          String      @default("PENDING")
+  pickupTime      DateTime
+  estimatedTotal  Decimal?    // <--- Questo è il campo critico
+  finalTotal      Decimal?
   
-  // Gestione Prezzo e Stato
-  // FIX: Usiamo String invece di Enum per compatibilità SQLite
-  status          String      @default("PENDING") 
-  estimatedPrice  Decimal?    
-  finalPrice      Decimal?    
-  
-  // Logistica
   storeId         String
   slotId          String
-  pickupTime      DateTime
-  
   privacyAccepted Boolean     @default(false)
-  
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
   store           Store       @relation(fields: [storeId], references: [id])
   slot            TimeSlot    @relation(fields: [slotId], references: [id])
-  
   items           OrderItem[]
 }
 
-// ---------------------------------------------------------
-// MODEL: OrderItem
-// ---------------------------------------------------------
 model OrderItem {
-  id          String  @id @default(uuid())
-  orderId     String
-  productName String
-  quantity    Int
-  price       Decimal
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String? 
+  quantity  Decimal
+  unit      String
+  price     Decimal
 
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product? @relation(fields: [productId], references: [id])
 }

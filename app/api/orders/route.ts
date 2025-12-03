@@ -4,67 +4,66 @@ import { prisma } from "@/lib/prisma";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
-    // Destrutturiamo i campi in arrivo dal Frontend
-    const { 
-      slotId, 
-      storeId,
-      customerName, 
-      customerEmail, 
-      customerPhone,
-      requestDetails, // Questo è il testo "Cosa desideri ordinare"
-      specialNotes,
-      privacyAccepted
-    } = body;
+    console.log("📥 Ricevuto payload ordine:", body); // Debug nel terminale
 
-    // 1. Validazione Rigorosa
-    if (!slotId || !customerName || !customerPhone || !requestDetails) {
-      return NextResponse.json(
-        { error: "Mancano dati obbligatori (Nome, Telefono o Dettagli Ordine)" },
-        { status: 400 }
-      );
+    const { storeId, slotId, name, email, phone, items, estimatedTotal } = body;
+
+    // 1. Validazione Dati
+    if (!name || !phone || !items || items.length === 0 || !slotId) {
+      console.error("❌ Dati mancanti");
+      return NextResponse.json({ error: "Dati dell'ordine incompleti" }, { status: 400 });
     }
 
-    if (!privacyAccepted) {
-       return NextResponse.json(
-        { error: "È necessario accettare la privacy policy" },
-        { status: 400 }
-      );
+    // 2. Recupero Negozio (Gestione 'auto_select')
+    let finalStoreId = storeId;
+    if (storeId === 'auto_select') {
+      const store = await prisma.store.findFirst();
+      if (!store) {
+        console.error("❌ Nessun negozio nel DB");
+        return NextResponse.json({ error: "Configurazione negozio mancante" }, { status: 500 });
+      }
+      finalStoreId = store.id;
     }
 
-    // 2. Transazione Database
+    // 3. Validazione Slot
+    const slot = await prisma.timeSlot.findUnique({ where: { id: slotId } });
+    if (!slot) {
+      console.error(`❌ Slot ID ${slotId} non trovato nel DB`);
+      return NextResponse.json({ error: "L'orario selezionato non è più disponibile" }, { status: 400 });
+    }
+
+    // 4. Transazione di Salvataggio
     const result = await prisma.$transaction(async (tx) => {
       
-      // Controlliamo lo slot
-      const slot = await tx.timeSlot.findUnique({
-        where: { id: slotId },
-      });
-
-      if (!slot) throw new Error("Slot non trovato");
-      if (slot.bookedCount >= slot.maxCapacity) throw new Error("Slot pieno");
-
-      // Creazione Ordine
       const newOrder = await tx.order.create({
         data: {
-          storeId,
-          slotId,
-          customerName,
-          customerEmail: customerEmail || null, // Gestisce stringa vuota o undefined
-          customerPhone,
+          storeId: finalStoreId,
+          slotId: slotId, // Usiamo l'ID reale
+          customerName: name,
+          customerEmail: email || "",
+          customerPhone: phone,
+          status: "PENDING",
+          pickupTime: slot.startTime, // Usiamo l'orario reale dello slot
           
-          // --- CORREZIONE QUI SOTTO ---
-          // Il campo nel DB si chiama 'requestDetails', non 'description'
-          requestDetails: requestDetails, 
+          // Conversione sicura per Decimal
+          estimatedTotal: Number(estimatedTotal), 
           
-          specialNotes: specialNotes || null,
-          pickupTime: slot.startTime, // Salviamo l'orario di ritiro
-          status: "PENDING", // Stringa semplice (compatibile con SQLite)
           orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
-          privacyAccepted: true
+          
+          // Creazione Items
+         items: {
+            create: items.map((item: any) => ({
+              // Assicuriamoci che i valori siano numeri e l'ID stringa
+              productId: String(item.id),
+              quantity: Number(item.quantity),
+              unit: String(item.unit),
+              price: Number(item.pricePerKg)
+            }))
+          }
         },
       });
 
-      // Aggiorna contatore slot
+      // Aggiorna contatore slot (opzionale)
       await tx.timeSlot.update({
         where: { id: slotId },
         data: { bookedCount: { increment: 1 } },
@@ -73,12 +72,14 @@ export async function POST(request: Request) {
       return newOrder;
     });
 
+    console.log("✅ Ordine creato con successo:", result.id);
     return NextResponse.json(result, { status: 201 });
 
   } catch (error) {
-    console.error("Errore creazione ordine:", error);
+    console.error("🔥 ERRORE CRITICO API:", error);
+    // Restituiamo l'errore reale al frontend per capire cosa succede
     return NextResponse.json(
-      { error: "Errore interno durante il salvataggio." },
+      { error: "Errore interno del server durante il salvataggio" }, 
       { status: 500 }
     );
   }

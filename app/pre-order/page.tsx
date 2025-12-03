@@ -1,205 +1,96 @@
-"use client";
-
-import { useState } from 'react';
-import { Calendar, Clock, User, FileText } from 'lucide-react'; // Rimosso Phone, Mail
-import { useRouter } from 'next/navigation';
-
-interface FormData {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  orderDetails: string;
-  specialNotes: string;
-  pickupDate: string;
-  privacyAccepted: boolean;
-}
-
-// CORREZIONE TYPE: Definiamo che gli errori sono sempre stringhe
-type FormErrors = {
-  [K in keyof FormData]?: string;
-};
+import { PreOrderForm } from '@/components/booking/PreOrderForm';
+import { AlertCircle, Phone } from 'lucide-react';
 
 export default function PreOrderPage() {
-  const router = useRouter();
-  const [formData, setFormData] = useState<FormData>({
-    firstName: '',
-    lastName: '',
-    phone: '',
-    email: '',
-    orderDetails: '',
-    specialNotes: '',
-    pickupDate: '',
-    privacyAccepted: false
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  // CORREZIONE: Usiamo il nuovo tipo FormErrors
-  const [errors, setErrors] = useState<FormErrors>({});
-
-  const getAvailableDates = () => {
-    const dates = [];
-    const today = new Date();
-    for (let i = 1; i <= 14; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const dayOfWeek = date.getDay();
-      if (dayOfWeek >= 2 && dayOfWeek <= 6) {
-        dates.push(date.toISOString().split('T')[0]);
-      }
-    }
-    return dates;
-  };
-  const availableDates = getAvailableDates();
-
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}; // Usa il tipo corretto
-    
-    if (!formData.firstName.trim()) newErrors.firstName = 'Nome richiesto';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Cognome richiesto';
-    if (!formData.phone.trim()) newErrors.phone = 'Telefono richiesto';
-    if (!formData.orderDetails.trim()) newErrors.orderDetails = 'Dettagli ordine richiesti';
-    if (!formData.pickupDate) newErrors.pickupDate = 'Data di ritiro richiesta';
-    
-    // CORREZIONE: Ora possiamo assegnare una stringa perché FormErrors accetta stringhe
-    if (!formData.privacyAccepted) newErrors.privacyAccepted = 'Accettazione privacy richiesta';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      // Simuliamo chiamata API e attesa
-      await new Promise(resolve => setTimeout(resolve, 1000)); 
-      
-      // Successo -> Redirect
-      router.push('/booking/success');
-
-    } catch (error) {
-      // CORREZIONE: Usiamo la variabile error per il debug
-      console.error("Errore invio form:", error);
-      alert("Errore durante l'invio");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleInputChange = (field: keyof FormData, value: string | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
-  };
-
-  const formatDate = (dateString: string) => {
-    if(!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-  };
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold text-charcoal mb-4 font-serif">Preordina il Tuo Pesce</h1>
-        <p className="text-charcoal-light max-w-2xl mx-auto">
-          Compila il modulo sottostante per prenotare il pescato del giorno. 
-          Ti invieremo un SMS di conferma con il prezzo esatto.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6 bg-white p-8 rounded-xl shadow-lg border border-gray-100">
+    <div className="py-16 bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Dati Personali */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-charcoal flex items-center border-b pb-2">
-            <User className="h-5 w-5 mr-2 text-sage" /> Dati Personali
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4 font-serif">
+            Prenota il Fresco, Evita la Fila!
+          </h1>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Con il nostro servizio di <strong>Preordine Senza Impegno</strong> puoi assicurarti 
+            il pesce migliore della giornata comodamente da casa tua. Scegli cosa desideri, 
+            indica quando vuoi ritirarlo e noi ti confermeremo la disponibilità e il prezzo esatto via SMS.
+          </p>
+        </div>
+
+        {/* How it Works */}
+        <div className="bg-white rounded-lg shadow-md p-8 mb-12 border border-gray-100">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center font-serif">Come Funziona</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { id: 1, title: "Compila il Modulo", text: "Inserisci i tuoi dati e il tuo ordine. Indicaci il giorno preferito per il ritiro." },
+              { id: 2, title: "Noi Verifichiamo", text: "La mattina stessa, controlliamo la disponibilità al mercato ittico e la freschezza ottimale." },
+              { id: 3, title: "Ricevi la Conferma", text: "Ti invieremo un SMS con il totale esatto e l'orario di ritiro. Solo allora l'ordine sarà confermato." },
+              { id: 4, title: "Ritira e Paga", text: "Vieni in pescheria all'ora stabilita, paghi e porti via il tuo pesce fresco, già pronto." }
+            ].map((step) => (
+              <div key={step.id} className="text-center">
+                <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl font-bold text-blue-600">{step.id}</span>
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{step.title}</h3>
+                <p className="text-gray-600 text-sm">{step.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Form Container */}
+        <div className="max-w-3xl mx-auto">
+             <PreOrderForm />
+        </div>
+
+        {/* Important Notes & FAQ */}
+        <div className="mt-12 bg-yellow-50 border border-yellow-200 rounded-lg p-8">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+            <AlertCircle className="h-6 w-6 text-yellow-600 mr-2" />
+            Note Importanti & FAQ
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-              <input type="text" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sage outline-none ${errors.firstName ? 'border-red-500' : 'border-gray-300'}`} />
-              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+              <h4 className="font-medium text-gray-900 mb-2">⚠️ Attenzione</h4>
+              <p className="text-gray-700 text-sm mb-4">
+                L'invio del modulo è una <strong>richiesta di preordine</strong>, non una conferma d'acquisto. 
+                La disponibilità dipende dall'approvvigionamento giornaliero al mercato.
+              </p>
+              
+              <h4 className="font-medium text-gray-900 mb-2">📱 Quando riceverò l'SMS?</h4>
+              <p className="text-gray-700 text-sm mb-4">
+                Generalmente entro le <strong>10:30</strong> del mattino del giorno del ritiro.
+              </p>
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cognome *</label>
-              <input type="text" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sage outline-none ${errors.lastName ? 'border-red-500' : 'border-gray-300'}`} />
-              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+              <h4 className="font-medium text-gray-900 mb-2">🔄 Posso modificare l'ordine?</h4>
+              <p className="text-gray-700 text-sm mb-4">
+                Sì, puoi contattarci telefonicamente prima di aver ricevuto l'SMS di conferma.
+              </p>
+              
+              <h4 className="font-medium text-gray-900 mb-2">💳 Metodi di pagamento</h4>
+              <p className="text-gray-700 text-sm mb-4">
+                Contanti, Carta di Credito/Debito, Bancomat.
+              </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Telefono *</label>
-              <input type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sage outline-none ${errors.phone ? 'border-red-500' : 'border-gray-300'}`} />
+          
+          <div className="mt-6 p-4 bg-white rounded-lg border border-yellow-300">
+            <div className="flex items-center space-x-2 text-yellow-800">
+              <Phone className="h-4 w-4" />
+              <span className="font-medium">Il mio ordine non è disponibile?</span>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email (Opzionale)</label>
-              <input type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage outline-none" />
-            </div>
+            <p className="text-yellow-700 text-sm mt-1">
+              Ti contatteremo telefonicamente per proporti un'alternativa di pari qualità e valore.
+            </p>
           </div>
         </div>
 
-        {/* Dettagli Ordine */}
-        <div className="space-y-4 pt-4">
-          <h3 className="text-lg font-semibold text-charcoal flex items-center border-b pb-2">
-            <FileText className="h-5 w-5 mr-2 text-sage" /> Il Tuo Ordine
-          </h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cosa desideri ordinare? *</label>
-            <textarea rows={4} value={formData.orderDetails} onChange={(e) => handleInputChange('orderDetails', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sage outline-none ${errors.orderDetails ? 'border-red-500' : 'border-gray-300'}`}
-              placeholder="Es: 1kg di orate, 500g di gamberi rossi..." />
-            {errors.orderDetails && <p className="text-red-500 text-xs mt-1">{errors.orderDetails}</p>}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Note Speciali</label>
-            <input type="text" value={formData.specialNotes} onChange={(e) => handleInputChange('specialNotes', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage outline-none" placeholder="Es: Già pulito, sottovuoto..." />
-          </div>
-        </div>
-
-        {/* Data Ritiro */}
-        <div className="space-y-4 pt-4">
-          <h3 className="text-lg font-semibold text-charcoal flex items-center border-b pb-2">
-            <Calendar className="h-5 w-5 mr-2 text-sage" /> Ritiro
-          </h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Seleziona data *</label>
-            <select value={formData.pickupDate} onChange={(e) => handleInputChange('pickupDate', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-sage outline-none ${errors.pickupDate ? 'border-red-500' : 'border-gray-300'}`}>
-              <option value="">-- Seleziona --</option>
-              {availableDates.map(date => (
-                <option key={date} value={date}>{formatDate(date)}</option>
-              ))}
-            </select>
-            {errors.pickupDate && <p className="text-red-500 text-xs mt-1">{errors.pickupDate}</p>}
-          </div>
-          <div className="bg-sage/10 p-3 rounded-md flex items-center text-sage-dark text-sm">
-            <Clock className="h-4 w-4 mr-2" />
-            Orario di ritiro standard: 07:00 - 14:00
-          </div>
-        </div>
-
-        {/* Privacy */}
-        <div className="flex items-start space-x-3 pt-4">
-          <input type="checkbox" id="privacy" checked={formData.privacyAccepted} onChange={(e) => handleInputChange('privacyAccepted', e.target.checked)}
-            className="mt-1 h-4 w-4 text-sage border-gray-300 rounded focus:ring-sage" />
-          <label htmlFor="privacy" className="text-sm text-gray-600">
-            Acconsento al trattamento dei dati personali. <span className={`text-red-500 ${errors.privacyAccepted ? 'inline' : 'hidden'}`}>*</span>
-          </label>
-        </div>
-
-        <button type="submit" disabled={isSubmitting} className="w-full bg-charcoal text-white py-3 rounded-lg font-bold hover:bg-sage-dark transition-colors shadow-lg disabled:opacity-70">
-          {isSubmitting ? 'Invio in corso...' : 'Invia Richiesta Preordine'}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
