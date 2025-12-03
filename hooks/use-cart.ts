@@ -1,14 +1,16 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
+// 1. Definiamo la struttura del singolo oggetto nel carrello
 export interface CartItem {
-  id: string; // Product ID
+  id: string;
   name: string;
   pricePerKg: number;
-  quantity: number; // Quantità scelta dall'utente
+  quantity: number;
   unit: string;
 }
 
+// 2. Definiamo le azioni disponibili (Aggiungi, Rimuovi, Pulisci)
 interface CartStore {
   items: CartItem[];
   addItem: (item: CartItem) => void;
@@ -18,21 +20,24 @@ interface CartStore {
   totalEstimated: () => number;
 }
 
+// 3. Creiamo lo Store con persistenza (salvataggio automatico)
 export const useCart = create<CartStore>()(
   persist(
+    // Argomento 1: La logica dello store
     (set, get) => ({
       items: [],
       
       addItem: (item) => set((state) => {
         const existing = state.items.find((i) => i.id === item.id);
         if (existing) {
-          // Se esiste già, aggiorniamo solo la quantità
+          // Se il prodotto esiste già, aumentiamo solo la quantità
           return {
             items: state.items.map((i) => 
               i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i
             )
           };
         }
+        // Altrimenti lo aggiungiamo alla lista
         return { items: [...state.items, item] };
       }),
 
@@ -49,11 +54,16 @@ export const useCart = create<CartStore>()(
       totalEstimated: () => {
         const { items } = get();
         return items.reduce((acc, item) => {
-          // Logica semplificata: assumiamo che quantity sia sempre in unità di prezzo
           return acc + (item.pricePerKg * item.quantity);
         }, 0);
       }
     }),
-    { name: 'fish-cart-storage' } // Salva nel localStorage così non si perde al refresh
+    
+    // Argomento 2: Le OPZIONI (Qui era l'errore: questo oggetto è obbligatorio)
+    {
+      name: 'fish-cart-storage', // Nome univoco nel localStorage
+      storage: createJSONStorage(() => localStorage), // Specifica esplicita dello storage
+      skipHydration: true, // Aiuta a prevenire errori di idratazione con Next.js
+    }
   )
 );
