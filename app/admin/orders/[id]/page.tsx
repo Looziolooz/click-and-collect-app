@@ -2,34 +2,46 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Printer, Check, Clock, User, Phone, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Printer, Check, Calculator } from 'lucide-react';
 
-// Aggiornata l'interfaccia per usare 'id'
 export default function ManageOrderPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [order, setOrder] = useState<any>(null);
+  const [orderItems, setOrderItems] = useState<any[]>([]); // Stato locale per gli items modificabili
   const [finalPrice, setFinalPrice] = useState<string>("");
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Ora usiamo correttamente params.id che corrisponde al nome della cartella [id]
     fetch(`/api/admin/orders/${params.id}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Ordine non trovato");
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         setOrder(data);
-        setFinalPrice(data.finalTotal || data.estimatedTotal);
-        setLoading(false);
+        setOrderItems(data.items); // Inizializza gli items modificabili
+        setFinalPrice(data.finalTotal ? String(data.finalTotal) : String(data.estimatedTotal));
       })
-      .catch((err) => {
-        console.error(err);
-        alert("Impossibile trovare l'ordine specificato.");
-        router.push('/admin/dashboard');
-      });
-  }, [params.id, router]);
+      .catch((err) => console.error(err));
+  }, [params.id]);
+
+  // Funzione per cambiare il prezzo totale di una riga (es. il pesce pesato costa X)
+  const handleItemPriceChange = (itemId: string, newTotalRowPrice: string) => {
+    const updatedItems = orderItems.map(item => {
+      if (item.id === itemId) {
+        // Calcoliamo il "prezzo unitario" al contrario se necessario, 
+        // ma per semplicità qui salviamo il prezzo totale della riga nel campo 'price' 
+        // (o modifichiamo la logica per salvare quantità reale e prezzo al kg).
+        // PER SEMPLICITÀ: Immaginiamo che tu inserisca il prezzo FINALE di quel pezzo di pesce.
+        return { ...item, price: parseFloat(newTotalRowPrice) || 0, quantity: 1, unit: 'pz' }; 
+        // Nota: Questo sovrascrive la logica peso x prezzo per diventare "Prezzo a corpo" per quel pezzo pesato.
+      }
+      return item;
+    });
+    
+    setOrderItems(updatedItems);
+    
+    // Ricalcola il totale generale automaticamente
+    const newTotal = updatedItems.reduce((acc, item) => acc + (Number(item.price) * Number(item.quantity)), 0);
+    setFinalPrice(newTotal.toFixed(2));
+  };
 
   const handleUpdateOrder = async (newStatus: string) => {
     setSaving(true);
@@ -39,163 +51,105 @@ export default function ManageOrderPage({ params }: { params: { id: string } }) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: newStatus,
-          finalTotal: parseFloat(finalPrice)
+          finalTotal: parseFloat(finalPrice),
+          items: orderItems // Inviamo gli items modificati
         })
       });
       
       if (res.ok) {
         const updated = await res.json();
         setOrder(updated);
-        alert("✅ Ordine aggiornato con successo!");
-      } else {
-        throw new Error("Errore salvataggio");
+        setOrderItems(updated.items);
+        alert("✅ Ordine e prezzi aggiornati!");
       }
     } catch (e) {
-      alert("❌ Errore durante l'aggiornamento. Riprova.");
+      alert("Errore salvataggio");
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center text-brand-blue font-bold animate-pulse">
-      Caricamento scheda ordine...
-    </div>
-  );
-
-  if (!order) return null;
+  if (!order) return <div className="p-8">Caricamento...</div>;
 
   return (
     <div className="min-h-screen bg-brand-offwhite p-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         
-        <button onClick={() => router.back()} className="flex items-center text-gray-500 hover:text-brand-blue mb-6 font-medium transition-colors">
-          <ArrowLeft size={20} className="mr-2" /> Torna alla Dashboard
-        </button>
+        {/* Intestazione */}
+        <div className="flex items-center justify-between mb-6">
+           <button onClick={() => router.back()} className="flex items-center text-gray-500 hover:text-brand-blue">
+            <ArrowLeft size={20} className="mr-2" /> Torna indietro
+          </button>
+          <h1 className="text-2xl font-bold font-serif text-brand-blue-dark">Gestione Ordine #{order.orderNumber}</h1>
+        </div>
 
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-100">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Header Ordine */}
-          <div className="bg-brand-blue p-8 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold font-serif">Ordine #{order.orderNumber}</h1>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                  order.status === 'COMPLETED' ? 'bg-green-500 text-white' : 
-                  order.status === 'READY' ? 'bg-blue-400 text-white' : 
-                  'bg-brand-yellow text-brand-blue'
-                }`}>
-                  {order.status === 'PENDING' ? 'DA PESARE' : order.status}
-                </span>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:gap-6 text-blue-100 text-sm mt-3">
-                <span className="flex items-center gap-2"><User size={16} className="text-brand-yellow"/> {order.customerName}</span>
-                <span className="flex items-center gap-2"><Phone size={16} className="text-brand-yellow"/> {order.customerPhone}</span>
-                <span className="flex items-center gap-2"><Clock size={16} className="text-brand-yellow"/> Ritiro: {new Date(order.pickupTime).toLocaleString('it-IT')}</span>
-              </div>
-            </div>
+          {/* Lista Prodotti Modificabile */}
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Calculator size={20} className="text-brand-blue"/> Pesatura e Prezzi
+            </h2>
             
-            <div className="text-right bg-white/10 p-4 rounded-lg backdrop-blur-sm border border-white/20">
-              <div className="text-xs text-blue-200 uppercase tracking-wide mb-1">Totale Stimato</div>
-              <div className="text-2xl font-bold font-serif text-brand-yellow">€ {Number(order.estimatedTotal).toFixed(2)}</div>
+            <div className="space-y-4">
+              {orderItems.map((item: any) => (
+                <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between bg-blue-50/50 p-4 rounded-lg border border-blue-100 gap-4">
+                  <div className="flex-1">
+                    <div className="font-bold text-gray-900">{item.product?.name || "Prodotto"}</div>
+                    <div className="text-xs text-gray-500">
+                      Stimato: {item.quantity} {item.unit} a €{item.price}/kg
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-bold uppercase text-gray-500">Prezzo Reale:</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-serif">€</span>
+                      {/* Qui l'admin inserisce il prezzo finale del pezzo pesato */}
+                      <input 
+                        type="number" 
+                        step="0.01"
+                        defaultValue={(item.price * item.quantity).toFixed(2)} // Valore iniziale
+                        onBlur={(e) => handleItemPriceChange(item.id, e.target.value)} // Aggiorna al cambio focus
+                        className="w-32 p-2 pl-7 rounded-md border border-gray-300 font-bold text-right text-gray-900 focus:ring-2 focus:ring-brand-blue outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* COLONNA SX: Lista Prodotti */}
-            <div className="lg:col-span-2 space-y-6">
-              <h2 className="text-xl font-bold text-gray-800 border-b pb-4 flex items-center gap-2">
-                <span className="bg-blue-100 text-brand-blue w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
-                Lista da Preparare
-              </h2>
+          {/* Totale e Azioni */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-brand-blue text-white p-6 rounded-xl shadow-lg">
+              <div className="text-sm text-blue-200 uppercase mb-1">Totale da Pagare</div>
+              <div className="text-4xl font-bold font-serif mb-6">€ {finalPrice}</div>
               
               <div className="space-y-3">
-                {order.items.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100 hover:border-blue-200 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 bg-brand-blue text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md">
-                        {item.quantity}
-                      </div>
-                      <div>
-                        <div className="font-bold text-gray-900 text-lg">{item.product?.name || "Prodotto rimosso"}</div>
-                        <div className="text-sm text-gray-500 font-medium">{item.unit} x € {Number(item.price).toFixed(2)}</div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold text-gray-700 text-lg">
-                        € {(Number(item.price) * Number(item.quantity)).toFixed(2)}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {order.specialNotes && (
-                <div className="bg-yellow-50 p-6 rounded-xl border border-brand-yellow/30 text-yellow-900 mt-6 flex items-start gap-3">
-                  <AlertCircle className="text-brand-yellow mt-1 flex-shrink-0" />
-                  <div>
-                    <strong className="block text-brand-blue-dark mb-1">Nota del Cliente:</strong> 
-                    {order.specialNotes}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* COLONNA DX: Azioni (La Bilancia) */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 shadow-inner">
-                <h2 className="text-xl font-bold text-gray-800 border-b border-blue-200 pb-4 flex items-center gap-2 mb-4">
-                  <span className="bg-brand-blue text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
-                  Cassa & Peso
-                </h2>
-
-                <label className="block text-sm font-bold text-brand-blue mb-2 uppercase tracking-wide">
-                  Totale Reale (€)
-                </label>
-                <div className="flex items-center bg-white rounded-xl border-2 border-brand-blue overflow-hidden shadow-sm focus-within:ring-4 ring-blue-100 transition-all">
-                  <span className="pl-4 text-2xl text-gray-400 font-serif">€</span>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    value={finalPrice}
-                    onChange={(e) => setFinalPrice(e.target.value)}
-                    className="w-full text-3xl font-bold text-gray-900 p-3 outline-none font-serif"
-                    placeholder="0.00"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2 leading-tight">
-                  Pesa la merce e inserisci qui il prezzo finale che il cliente dovrà pagare.
-                </p>
-              </div>
-
-              <div className="space-y-3 pt-2">
                 <button 
                   onClick={() => handleUpdateOrder('READY')}
                   disabled={saving}
-                  className="w-full bg-brand-blue hover:bg-brand-blue-light text-white py-4 rounded-xl font-bold shadow-lg flex justify-center items-center gap-2 transition-all hover:-translate-y-1"
+                  className="w-full bg-brand-yellow text-brand-blue hover:bg-white py-3 rounded-lg font-bold shadow transition-all flex justify-center gap-2"
                 >
-                  <Save size={20} />
-                  {saving ? 'Salvataggio...' : 'Conferma e Notifica'}
+                  <Save size={18} /> {saving ? 'Salvataggio...' : 'Salva e Conferma'}
                 </button>
-
                 <button 
                   onClick={() => handleUpdateOrder('COMPLETED')}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-xl font-bold shadow-md flex justify-center items-center gap-2 transition-colors"
+                  className="w-full bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold shadow transition-all flex justify-center gap-2"
                 >
-                  <Check size={20} /> Segna come Pagato/Ritirato
+                  <Check size={18} /> Ordine Ritirato
                 </button>
-
                 <button 
                   onClick={() => window.print()}
-                  className="w-full bg-white border-2 border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 hover:text-brand-blue hover:border-brand-blue transition-all flex justify-center items-center gap-2"
+                  className="w-full bg-white/20 hover:bg-white/30 py-2 rounded-lg font-medium text-sm flex justify-center gap-2"
                 >
-                  <Printer size={20} /> Stampa Comanda
+                  <Printer size={16} /> Stampa
                 </button>
               </div>
             </div>
-
           </div>
+
         </div>
       </div>
     </div>

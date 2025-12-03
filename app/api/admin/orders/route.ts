@@ -1,24 +1,74 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Impedisce che la pagina venga salvata nella cache (così vedi sempre i nuovi ordini)
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+// GET: Legge i dettagli di un singolo ordine
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
-    // Recupera tutti gli ordini dal database
-    const orders = await prisma.order.findMany({
-      orderBy: {
-        createdAt: 'desc', // Mette i più recenti in alto
-      },
-      include: {
-        items: true, // Scarica anche i dettagli dei prodotti
+    const order = await prisma.order.findUnique({
+      where: { id: params.id },
+      include: { 
+        items: { 
+          include: { product: true } 
+        },
+        slot: true
       }
     });
 
-    return NextResponse.json(orders);
+    if (!order) {
+      return NextResponse.json({ error: "Ordine non trovato" }, { status: 404 });
+    }
+
+    return NextResponse.json(order);
   } catch (error) {
-    console.error("Errore fetch ordini admin:", error);
-    return NextResponse.json({ error: "Errore nel recupero degli ordini" }, { status: 500 });
+    console.error("Errore API GET Order:", error);
+    return NextResponse.json({ error: "Errore interno del server" }, { status: 500 });
+  }
+}
+
+// PUT: Aggiorna stato, totale e prezzi dei singoli articoli
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const body = await request.json();
+    const { status, finalTotal, items } = body;
+
+    // Usiamo una transazione per aggiornare tutto insieme in modo sicuro
+    const result = await prisma.$transaction(async (tx) => {
+      
+      // 1. Se ci sono articoli modificati, aggiorniamo i loro prezzi
+      if (items && Array.isArray(items)) {
+        for (const item of items) {
+          await tx.orderItem.update({
+            where: { id: item.id },
+            data: { 
+              price: Number(item.price), // Aggiorna il prezzo
+              quantity: Number(item.quantity) // Aggiorna la quantità/peso se modificata
+            }
+          });
+        }
+      }
+
+      // 2. Aggiorna l'ordine principale
+      const updatedOrder = await tx.order.update({
+        where: { id: params.id },
+        data: {
+          status: status,
+          finalTotal: finalTotal ? Number(finalTotal) : null,
+        },
+        // Importante: restituiamo gli items aggiornati per aggiornare l'interfaccia
+        include: { 
+          items: { include: { product: true } }, 
+          slot: true 
+        }
+      });
+
+      return updatedOrder;
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Errore API PUT Order:", error);
+    return NextResponse.json({ error: "Errore durante l'aggiornamento" }, { status: 500 });
   }
 }
