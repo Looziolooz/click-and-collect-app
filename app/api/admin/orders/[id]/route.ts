@@ -37,6 +37,13 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       data: {
         status: status,
         finalTotal: finalTotal ? Number(finalTotal) : null,
+      },
+      // --- CORREZIONE: Includiamo di nuovo le relazioni nella risposta ---
+      include: { 
+        items: { 
+          include: { product: true } 
+        },
+        slot: true
       }
     });
 
