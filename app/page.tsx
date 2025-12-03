@@ -1,137 +1,79 @@
 import { Hero } from '@/components/ui/Hero';
 import { ProductCard } from '@/components/ui/ProductCard';
-import Link from 'next/link'; // NEXT.JS usa questo, non react-router-dom
+import Link from 'next/link'; 
 import { ArrowRight, Award, Users, Clock } from 'lucide-react';
+import { prisma } from "@/lib/prisma";
 
-export default function Home() {
- const featuredProducts = [
-    {
-      id: "promo_orata", // <--- AGGIUNTO ID
-      name: "Orata Fresca",
-      description: "Orata del Mediterraneo, pescata del giorno.",
-      image: "/assets/fresh-sea-bass-bream.jpg",
-      category: "Pesce Pregiato",
-      pricePerKg: 18.50, // <--- AGGIUNTO PREZZO
-      unit: "kg",        // <--- AGGIUNTA UNITÀ
-      availability: "available" as const
-    },
-    {
-      id: "promo_azzurro", // <--- AGGIUNTO ID
-      name: "Pesce Azzurro",
-      description: "Selezione di sardine, alici e sgombri freschi.",
-      image: "/assets/blue-fish-selection.jpg",
-      category: "Pesce Azzurro",
-      pricePerKg: 9.00,  // <--- AGGIUNTO PREZZO
-      unit: "kg",        // <--- AGGIUNTA UNITÀ
-      availability: "available" as const
-    },
-    {
-      id: "promo_molluschi", // <--- AGGIUNTO ID
-      name: "Frutti di Mare",
-      description: "Cozze, vongole, polpi e seppie fresche.",
-      image: "/assets/seafood-shellfish-display.jpg",
-      category: "Molluschi",
-      pricePerKg: 12.00, // <--- AGGIUNTO PREZZO
-      unit: "kg",        // <--- AGGIUNTA UNITÀ
-      availability: "limited" as const
-    }
-  ];
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  // Prendi i primi 3 prodotti disponibili per la vetrina
+  const products = await prisma.product.findMany({ 
+    where: { isAvailable: true },
+    take: 3,
+    orderBy: { category: 'asc' }
+  });
 
   return (
-    <main className="min-h-screen bg-cream">
+    <main className="min-h-screen bg-brand-offwhite">
       <Hero />
       
-      {/* Featured Products Section */}
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-charcoal mb-4">
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-blue-dark mb-4">
               I Nostri Prodotti del Giorno
             </h2>
-            <p className="text-lg text-charcoal-light max-w-2xl mx-auto font-sans">
-              Selezione quotidiana del pesce più fresco, direttamente dal mercato ittico alle vostre tavole.
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto font-sans">
+              Selezione quotidiana del pesce più fresco, direttamente dal mercato ittico.
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {featuredProducts.map((product, index) => (
-              <ProductCard key={index} {...product} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            {products.map((p) => (
+              <ProductCard 
+                key={p.id} 
+                id={p.id}
+                name={p.name}
+                description={p.description}
+                image={p.image}
+                pricePerKg={Number(p.pricePerKg)} // Conversione Decimal -> Number
+                unit={p.unit}
+                category={p.category}
+                isAvailable={true}
+              />
             ))}
           </div>
           
           <div className="text-center">
-            {/* Nota: Ho messo un link fittizio verso i prodotti, potremo crearlo dopo */}
-            <Link
-              href="/booking/milano-centro"
-              className="inline-flex items-center space-x-2 text-sage-dark font-bold hover:text-charcoal transition-colors border-b-2 border-sage-dark hover:border-charcoal pb-1"
-            >
-              <span>Prenota il tuo pesce oggi</span>
+            <Link href="/products" className="inline-flex items-center space-x-2 text-brand-blue font-bold hover:text-brand-blue-light border-b-2 border-brand-blue pb-1 transition-colors">
+              <span>Vedi tutto il catalogo</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Why Choose Us Section */}
-      <section className="py-16 bg-cream-dark">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-serif font-bold text-charcoal mb-4">Perché Scegliere Fresco&Fresco</h2>
-            <p className="text-lg text-charcoal-light">
-              La nostra passione per la qualità e la freschezza ci distingue nel territorio.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div className="text-center group">
-              <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md group-hover:scale-110 transition-transform duration-300">
-                <Award className="h-10 w-10 text-sage" />
-              </div>
-              <h3 className="text-xl font-serif font-bold text-charcoal mb-3">Qualità Garantita</h3>
-              <p className="text-charcoal-light leading-relaxed">
-                Selezioniamo solo il pesce più fresco, controllando personalmente ogni prodotto.
-              </p>
+      <section className="py-20 bg-brand-blue text-white">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-3xl font-serif font-bold mb-6 text-brand-yellow">Perché Scegliere Fresco&Fresco</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-12">
+            <div className="flex flex-col items-center group">
+              <div className="bg-white/10 p-4 rounded-full mb-4 group-hover:bg-brand-yellow group-hover:text-brand-blue transition-colors"><Award className="h-8 w-8 text-brand-yellow group-hover:text-brand-blue"/></div>
+              <h3 className="font-bold text-xl mb-2">Qualità Garantita</h3>
+              <p className="text-blue-100 text-sm">Solo il pescato migliore, selezionato ogni mattina.</p>
             </div>
-            
-            <div className="text-center group">
-              <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md group-hover:scale-110 transition-transform duration-300">
-                <Users className="h-10 w-10 text-sage" />
-              </div>
-              <h3 className="text-xl font-serif font-bold text-charcoal mb-3">Esperienza Professionale</h3>
-              <p className="text-charcoal-light leading-relaxed">
-                Vincenzo Tutino, con anni di esperienza, vi consiglierà sempre il meglio.
-              </p>
+            <div className="flex flex-col items-center group">
+              <div className="bg-white/10 p-4 rounded-full mb-4 group-hover:bg-brand-yellow group-hover:text-brand-blue transition-colors"><Users className="h-8 w-8 text-brand-yellow group-hover:text-brand-blue"/></div>
+              <h3 className="font-bold text-xl mb-2">Esperienza</h3>
+              <p className="text-blue-100 text-sm">Oltre 20 anni di esperienza nel settore ittico.</p>
             </div>
-            
-            <div className="text-center group">
-              <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md group-hover:scale-110 transition-transform duration-300">
-                <Clock className="h-10 w-10 text-sage" />
-              </div>
-              <h3 className="text-xl font-serif font-bold text-charcoal mb-3">Servizio Preordine</h3>
-              <p className="text-charcoal-light leading-relaxed">
-                Prenota il tuo pesce online e ritiralo quando preferisci, senza code.
-              </p>
+            <div className="flex flex-col items-center group">
+              <div className="bg-white/10 p-4 rounded-full mb-4 group-hover:bg-brand-yellow group-hover:text-brand-blue transition-colors"><Clock className="h-8 w-8 text-brand-yellow group-hover:text-brand-blue"/></div>
+              <h3 className="font-bold text-xl mb-2">Click & Collect</h3>
+              <p className="text-blue-100 text-sm">Prenota online, salta la fila e paga al ritiro.</p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-sage">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-white mb-6">
-            Prenota il Fresco, Evita la Fila!
-          </h2>
-          <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto font-sans">
-            Con il nostro servizio di preordine puoi assicurarti il pesce migliore della giornata 
-            comodamente da casa tua.
-          </p>
-          <Link
-            href="/booking/milano-centro"
-            className="inline-block bg-charcoal text-white px-10 py-4 rounded-lg font-bold hover:bg-white hover:text-charcoal transition-all shadow-xl"
-          >
-            Inizia il Preordine
-          </Link>
         </div>
       </section>
     </main>

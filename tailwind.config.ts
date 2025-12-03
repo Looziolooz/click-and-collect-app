@@ -49,19 +49,24 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Manteniamo i vecchi colori per sicurezza (Sage/Charcoal) mappandoli ai nuovi o hardcodandoli
-        sage: {
-          DEFAULT: '#9ca986',
-          dark: '#7c8a6b',
+        // --- NUOVI COLORI DEL BRAND (Fresco & Fresco) ---
+        brand: {
+          blue: {
+            DEFAULT: '#003399', // Blu Reale del logo
+            light: '#0047ab',
+            dark: '#002266'
+          },
+          yellow: {
+            DEFAULT: '#FFD700', // Giallo Oro del logo
+            light: '#FFE55C',
+            dark: '#E6C200'
+          },
+          red: {
+            DEFAULT: '#DC143C', // Rosso accento
+          },
+          white: '#FFFFFF',
+          offwhite: '#F4F7FB' // Bianco azzurrino per sfondi
         },
-        charcoal: {
-          DEFAULT: '#2d3436',
-          light: '#636e72',
-        },
-        cream: {
-          DEFAULT: '#fdfbf7',
-          dark: '#f5f0e6',
-        }
       },
       borderRadius: {
         lg: "var(--radius)",
