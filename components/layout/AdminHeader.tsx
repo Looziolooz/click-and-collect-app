@@ -80,7 +80,6 @@ export function AdminHeader() {
                   key={item.name}
                   href={item.href}
                   onClick={() => setIsMenuOpen(false)}
-                  // CORREZIONE QUI: Rimosso 'block', lasciato solo 'flex'
                   className={`px-3 py-3 rounded-md text-base font-medium flex items-center ${
                     isActive 
                       ? 'bg-brand-blue text-brand-yellow' 
@@ -94,7 +93,6 @@ export function AdminHeader() {
             <div className="border-t border-white/10 mt-2 pt-2">
               <Link
                 href="/"
-                // CORREZIONE QUI: Rimosso 'block', lasciato solo 'flex'
                 className="px-3 py-3 rounded-md text-base font-medium text-red-300 hover:text-red-100 hover:bg-white/10 flex items-center"
               >
                 <LogOut className="mr-3 h-5 w-5" /> Esci
