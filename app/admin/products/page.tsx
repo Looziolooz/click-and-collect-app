@@ -29,7 +29,7 @@ export default function AdminProducts() {
     pricePerKg: "",
     unit: "kg",
     category: "general",
-    image: "" // Campo Immagine aggiunto
+    image: ""
   });
 
   // --- LOGICA DI CARICAMENTO ---
@@ -58,8 +58,8 @@ export default function AdminProducts() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newProduct,
-          pricePerKg: parseFloat(newProduct.pricePerKg.replace(',', '.')), // Gestione virgola/punto
-          image: newProduct.image.trim() === "" ? null : newProduct.image // Gestione stringa vuota
+          pricePerKg: parseFloat(newProduct.pricePerKg.replace(',', '.')),
+          image: newProduct.image.trim() === "" ? null : newProduct.image
         })
       });
 
@@ -67,10 +67,8 @@ export default function AdminProducts() {
 
       const createdProduct = await res.json();
       
-      // Aggiorna la lista e chiudi modale
       setProducts(prev => [...prev, createdProduct]);
       setIsModalOpen(false);
-      // Reset form
       setNewProduct({ name: "", description: "", pricePerKg: "", unit: "kg", category: "general", image: "" }); 
       
     } catch (error) {
@@ -80,7 +78,7 @@ export default function AdminProducts() {
     }
   };
 
-  // --- ALTRE FUNZIONI ESISTENTI (Toggle, SavePrice, Delete) ---
+  // --- ALTRE FUNZIONI ---
   const toggleAvailability = async (id: string, currentStatus: boolean) => {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, isAvailable: !currentStatus } : p));
     try {
@@ -166,7 +164,7 @@ export default function AdminProducts() {
             <tbody className="bg-white divide-y divide-gray-100">
               {filteredProducts.map((product) => (
                 <tr key={product.id} className={`group transition-colors ${!product.isAvailable ? 'bg-gray-50 opacity-75' : 'hover:bg-blue-50/30'}`}>
-                  {/* Toggle Disponibilità */}
+                  
                   <td className="px-6 py-4">
                     <button 
                       onClick={() => toggleAvailability(product.id, product.isAvailable)}
@@ -176,7 +174,6 @@ export default function AdminProducts() {
                     </button>
                   </td>
 
-                  {/* Info Prodotto */}
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center text-gray-400">
@@ -194,7 +191,6 @@ export default function AdminProducts() {
                     </div>
                   </td>
 
-                  {/* Prezzo Editabile */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="relative group/price w-32">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-serif">€</span>
@@ -260,7 +256,8 @@ export default function AdminProducts() {
 
               {/* URL Immagine */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
+                {/* CORREZIONE QUI: Rimosso 'block' */}
+                <label className="text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
                   <LinkIcon size={14}/> Immagine (URL)
                 </label>
                 <input 
@@ -273,7 +270,7 @@ export default function AdminProducts() {
                 <p className="text-[10px] text-gray-400 mt-1">
                   Incolla qui il link di un'immagine trovata su internet o dal sito del fornitore.
                 </p>
-                {/* Preview piccola se c'è un URL valido */}
+                {/* Preview piccola */}
                 {newProduct.image && (
                   <div className="mt-2 h-20 w-20 rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
                     <img src={newProduct.image} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
