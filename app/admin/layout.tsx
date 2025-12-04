@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { Package, Clock, Settings, LogOut } from 'lucide-react';
+import { AdminHeader } from '@/components/layout/AdminHeader';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <AdminHeader />
       {/* NAVBAR ADMIN - Blu Scuro con accenti Gialli */}
       <nav className="bg-brand-blue-dark text-white shadow-lg border-b-4 border-brand-yellow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
