@@ -148,6 +148,7 @@ export default function AdminProducts() {
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center text-gray-400">
                         {product.image ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={product.image} alt="" className="h-full w-full object-cover" />
                         ) : <ImageIcon size={20} />}
                       </div>
@@ -179,8 +180,8 @@ export default function AdminProducts() {
                           onBlur={(e) => savePrice(product.id, e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                              savePrice(product.id, (e.target as HTMLInputElement).value);
-                              (e.target as HTMLInputElement).blur();
+                              savePrice(product.id, (e.currentTarget as HTMLInputElement).value);
+                              (e.currentTarget as HTMLInputElement).blur();
                             }
                           }}
                         />
