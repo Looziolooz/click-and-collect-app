@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Package, Trash2, Image as ImageIcon, Save, RefreshCw, DollarSign } from 'lucide-react';
+import { Plus, Search, Trash2, Image as ImageIcon, X, Save, Loader2 } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -20,7 +20,18 @@ export default function AdminProducts() {
   const [filter, setFilter] = useState("");
   const [editingPrice, setEditingPrice] = useState<{ id: string, value: string } | null>(null);
 
-  // Caricamento Iniziale
+  // Stati per il Modale Nuovo Prodotto
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    description: "",
+    pricePerKg: "",
+    unit: "kg",
+    category: "general"
+  });
+
+  // --- LOGICA DI CARICAMENTO ---
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     try {
@@ -35,45 +46,63 @@ export default function AdminProducts() {
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
-  // Gestione Rapida Disponibilità (Toggle)
-  const toggleAvailability = async (id: string, currentStatus: boolean) => {
-    // 1. Aggiornamento Ottimistico (Feedback immediato UI)
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, isAvailable: !currentStatus } : p));
+  // --- LOGICA CREAZIONE PRODOTTO ---
+  const handleCreateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
 
-    // 2. Chiamata API Background
+    try {
+      const res = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newProduct,
+          pricePerKg: parseFloat(newProduct.pricePerKg.replace(',', '.')) // Gestione virgola/punto
+        })
+      });
+
+      if (!res.ok) throw new Error("Errore creazione");
+
+      const createdProduct = await res.json();
+      
+      // Aggiorna la lista e chiudi modale
+      setProducts(prev => [...prev, createdProduct]);
+      setIsModalOpen(false);
+      setNewProduct({ name: "", description: "", pricePerKg: "", unit: "kg", category: "general" }); // Reset form
+      
+    } catch (error) {
+      alert("Errore durante la creazione del prodotto.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- ALTRE FUNZIONI ESISTENTI (Toggle, SavePrice, Delete) ---
+  const toggleAvailability = async (id: string, currentStatus: boolean) => {
+    setProducts(prev => prev.map(p => p.id === id ? { ...p, isAvailable: !currentStatus } : p));
     try {
       await fetch(`/api/admin/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isAvailable: !currentStatus })
       });
-    } catch (error) {
-      alert("Errore aggiornamento disponibilità");
-      fetchProducts(); // Revert in caso di errore
-    }
+    } catch (error) { fetchProducts(); }
   };
 
-  // Gestione Salvataggio Prezzo
   const savePrice = async (id: string, newPrice: string) => {
     const numericPrice = parseFloat(newPrice);
     if (isNaN(numericPrice)) return;
-
     try {
       await fetch(`/api/admin/products/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pricePerKg: numericPrice })
       });
-      
-      // Aggiorna lo stato locale pulito
       setProducts(prev => prev.map(p => p.id === id ? { ...p, pricePerKg: numericPrice } : p));
       setEditingPrice(null);
-    } catch (error) {
-      alert("Errore salvataggio prezzo");
-    }
+    } catch (error) { alert("Errore salvataggio prezzo"); }
   };
 
-  // Funzione per eliminare prodotto
   const deleteProduct = async (id: string) => {
     if (!confirm("Sei sicuro di voler eliminare questo prodotto?")) return;
     try {
@@ -82,7 +111,6 @@ export default function AdminProducts() {
     } catch (e) { alert("Errore eliminazione"); }
   };
 
-  // Prodotti filtrati per la ricerca
   const filteredProducts = products.filter(p => 
     p.name.toLowerCase().includes(filter.toLowerCase()) || 
     p.category.toLowerCase().includes(filter.toLowerCase())
@@ -91,7 +119,7 @@ export default function AdminProducts() {
   if (loading) return <div className="p-8 text-center text-gray-500 font-mono">Sincronizzazione listino...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 relative">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
@@ -99,7 +127,10 @@ export default function AdminProducts() {
           <h1 className="text-3xl font-bold text-brand-blue-dark font-serif">Listino Giornaliero</h1>
           <p className="text-gray-500 text-sm mt-1">Gestisci disponibilità e prezzi del pescato di oggi.</p>
         </div>
-        <button onClick={() => alert("Funzionalità 'Nuovo Prodotto' da implementare nel modale")} className="bg-brand-blue text-white px-5 py-2.5 rounded-lg font-bold hover:bg-brand-blue-light transition-colors flex items-center gap-2 shadow-md">
+        <button 
+          onClick={() => setIsModalOpen(true)} 
+          className="bg-brand-blue text-white px-5 py-2.5 rounded-lg font-bold hover:bg-brand-blue-light transition-colors flex items-center gap-2 shadow-md"
+        >
           <Plus size={20} /> Nuovo Prodotto
         </button>
       </div>
@@ -122,22 +153,21 @@ export default function AdminProducts() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50/80">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-20">Disp.</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Prodotto</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Prezzo (€/Kg)</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Categoria</th>
-                <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Azioni</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase w-20">Disp.</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Prodotto</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Prezzo (€/Kg)</th>
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase">Categoria</th>
+                <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase">Azioni</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {filteredProducts.map((product) => (
                 <tr key={product.id} className={`group transition-colors ${!product.isAvailable ? 'bg-gray-50 opacity-75' : 'hover:bg-blue-50/30'}`}>
-                  
                   {/* Toggle Disponibilità */}
                   <td className="px-6 py-4">
                     <button 
                       onClick={() => toggleAvailability(product.id, product.isAvailable)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isAvailable ? 'bg-green-500' : 'bg-gray-300'}`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${product.isAvailable ? 'bg-green-500' : 'bg-gray-300'}`}
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isAvailable ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
@@ -148,7 +178,7 @@ export default function AdminProducts() {
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 flex items-center justify-center text-gray-400">
                         {product.image ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={product.image} alt="" className="h-full w-full object-cover" />
                         ) : <ImageIcon size={20} />}
                       </div>
@@ -161,48 +191,33 @@ export default function AdminProducts() {
                     </div>
                   </td>
 
-                  {/* Editing Prezzo */}
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <div className="relative group/price">
+                  {/* Prezzo Editabile */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="relative group/price w-28">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-serif">€</span>
                       <input 
-                        type="number"
-                        step="0.50"
-                        disabled={!product.isAvailable}
-                        className={`w-28 pl-7 pr-2 py-2 rounded-lg border font-mono font-bold text-right outline-none transition-all 
+                        type="number" step="0.50" disabled={!product.isAvailable}
+                        className={`w-full pl-7 pr-2 py-2 rounded-lg border font-mono font-bold text-right outline-none transition-all 
                           ${editingPrice?.id === product.id ? 'border-brand-blue ring-2 ring-brand-blue/20 bg-white' : 'border-transparent bg-transparent hover:border-gray-200 hover:bg-gray-50'}
                           ${!product.isAvailable && 'text-gray-400 cursor-not-allowed'}
                         `}
-                        // CORREZIONE QUI SOTTO: Aggiunto Number()
                         value={editingPrice?.id === product.id ? editingPrice.value : Number(product.pricePerKg || 0).toFixed(2)}
                         onFocus={(e) => setEditingPrice({ id: product.id, value: e.target.value })}
                         onChange={(e) => setEditingPrice({ id: product.id, value: e.target.value })}
                         onBlur={(e) => savePrice(product.id, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            savePrice(product.id, (e.currentTarget as HTMLInputElement).value);
-                            (e.currentTarget as HTMLInputElement).blur();
-                          }
-                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { savePrice(product.id, (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).blur(); } }}
                       />
-                      <span className="text-xs text-gray-400 ml-1">/{product.unit}</span>
                     </div>
-                  </div>
-                </td>
+                  </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <span className="px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-blue-100 text-blue-800 uppercase tracking-wide">
                       {product.category}
                     </span>
                   </td>
 
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      onClick={() => deleteProduct(product.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50"
-                      title="Elimina prodotto"
-                    >
+                  <td className="px-6 py-4 text-right">
+                    <button onClick={() => deleteProduct(product.id)} className="text-gray-400 hover:text-red-600 transition-colors p-2 rounded-full hover:bg-red-50">
                       <Trash2 size={18} />
                     </button>
                   </td>
@@ -211,10 +226,107 @@ export default function AdminProducts() {
             </tbody>
           </table>
         </div>
-        {filteredProducts.length === 0 && (
-          <div className="p-12 text-center text-gray-400">Nessun prodotto trovato.</div>
-        )}
       </div>
+
+      {/* --- MODALE NUOVO PRODOTTO --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100">
+            
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900 font-serif">Aggiungi Pescato</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProduct} className="p-6 space-y-4">
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Nome Prodotto</label>
+                <input 
+                  required autoFocus
+                  type="text" 
+                  placeholder="Es. Spigola di Mare"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue focus:border-brand-blue outline-none transition-all"
+                  value={newProduct.name}
+                  onChange={e => setNewProduct({...newProduct, name: e.target.value})}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Prezzo (€)</label>
+                  <input 
+                    required
+                    type="number" step="0.01" 
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue outline-none"
+                    value={newProduct.pricePerKg}
+                    onChange={e => setNewProduct({...newProduct, pricePerKg: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Unità</label>
+                  <select 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue outline-none bg-white"
+                    value={newProduct.unit}
+                    onChange={e => setNewProduct({...newProduct, unit: e.target.value})}
+                  >
+                    <option value="kg">Al Kg</option>
+                    <option value="pz">Al Pezzo</option>
+                    <option value="hg">All'Etto</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Categoria</label>
+                <select 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue outline-none bg-white"
+                  value={newProduct.category}
+                  onChange={e => setNewProduct({...newProduct, category: e.target.value})}
+                >
+                  <option value="general">Generale</option>
+                  <option value="premium">Premium / Pregiato</option>
+                  <option value="blue">Pesce Azzurro</option>
+                  <option value="shellfish">Crostacei / Molluschi</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">Descrizione (Opzionale)</label>
+                <textarea 
+                  rows={2}
+                  placeholder="Dettagli aggiuntivi per il cliente..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-blue outline-none resize-none"
+                  value={newProduct.description}
+                  onChange={e => setNewProduct({...newProduct, description: e.target.value})}
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-3 rounded-xl bg-brand-blue text-white font-bold hover:bg-brand-blue-dark transition-colors flex justify-center items-center gap-2 shadow-lg shadow-blue-900/20"
+                >
+                  {isSaving ? <Loader2 className="animate-spin" /> : <><Save size={20} /> Salva</>}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
