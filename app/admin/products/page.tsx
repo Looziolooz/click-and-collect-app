@@ -162,33 +162,34 @@ export default function AdminProducts() {
                   </td>
 
                   {/* Editing Prezzo */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <div className="relative group/price">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-serif">€</span>
-                        <input 
-                          type="number"
-                          step="0.50"
-                          disabled={!product.isAvailable}
-                          className={`w-28 pl-7 pr-2 py-2 rounded-lg border font-mono font-bold text-right outline-none transition-all 
-                            ${editingPrice?.id === product.id ? 'border-brand-blue ring-2 ring-brand-blue/20 bg-white' : 'border-transparent bg-transparent hover:border-gray-200 hover:bg-gray-50'}
-                            ${!product.isAvailable && 'text-gray-400 cursor-not-allowed'}
-                          `}
-                          value={editingPrice?.id === product.id ? editingPrice.value : product.pricePerKg.toFixed(2)}
-                          onFocus={(e) => setEditingPrice({ id: product.id, value: e.target.value })}
-                          onChange={(e) => setEditingPrice({ id: product.id, value: e.target.value })}
-                          onBlur={(e) => savePrice(product.id, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              savePrice(product.id, (e.currentTarget as HTMLInputElement).value);
-                              (e.currentTarget as HTMLInputElement).blur();
-                            }
-                          }}
-                        />
-                        <span className="text-xs text-gray-400 ml-1">/{product.unit}</span>
-                      </div>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <div className="relative group/price">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-serif">€</span>
+                      <input 
+                        type="number"
+                        step="0.50"
+                        disabled={!product.isAvailable}
+                        className={`w-28 pl-7 pr-2 py-2 rounded-lg border font-mono font-bold text-right outline-none transition-all 
+                          ${editingPrice?.id === product.id ? 'border-brand-blue ring-2 ring-brand-blue/20 bg-white' : 'border-transparent bg-transparent hover:border-gray-200 hover:bg-gray-50'}
+                          ${!product.isAvailable && 'text-gray-400 cursor-not-allowed'}
+                        `}
+                        // CORREZIONE QUI SOTTO: Aggiunto Number()
+                        value={editingPrice?.id === product.id ? editingPrice.value : Number(product.pricePerKg || 0).toFixed(2)}
+                        onFocus={(e) => setEditingPrice({ id: product.id, value: e.target.value })}
+                        onChange={(e) => setEditingPrice({ id: product.id, value: e.target.value })}
+                        onBlur={(e) => savePrice(product.id, e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            savePrice(product.id, (e.currentTarget as HTMLInputElement).value);
+                            (e.currentTarget as HTMLInputElement).blur();
+                          }
+                        }}
+                      />
+                      <span className="text-xs text-gray-400 ml-1">/{product.unit}</span>
                     </div>
-                  </td>
+                  </div>
+                </td>
 
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-blue-100 text-blue-800 uppercase tracking-wide">
