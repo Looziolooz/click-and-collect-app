@@ -4,20 +4,15 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Protezione Rotte Admin
+  // 1. Protezione Admin: Se non hai il cookie, vai al login
   if (pathname.startsWith('/admin')) {
-    // Controlliamo se esiste il cookie di sessione
     const adminSession = req.cookies.get('admin_session');
-
-    // Se NON c'è il cookie, reindirizza alla pagina di login
     if (!adminSession) {
-      const loginUrl = new URL('/login', req.url);
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(new URL('/login', req.url));
     }
   }
   
-  // 2. Redirect se già loggato
-  // Se l'admin è già loggato e prova ad andare su /login, mandalo direttamente alla dashboard
+  // 2. Redirect Login: Se hai già il cookie, vai alla dashboard
   if (pathname.startsWith('/login')) {
      const adminSession = req.cookies.get('admin_session');
      if (adminSession) {
@@ -29,6 +24,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Specifica su quali rotte deve agire il middleware
   matcher: ['/admin/:path*', '/login'],
 };
