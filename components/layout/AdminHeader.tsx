@@ -26,7 +26,7 @@ export function AdminHeader() {
               <span className="font-serif font-bold text-xl text-brand-yellow">Admin Panel</span>
             </div>
             
-            {/* Desktop Links (Visibili solo su schermi grandi) */}
+            {/* Desktop Links */}
             <div className="hidden md:flex md:space-x-8">
               {navigation.map((item) => {
                 const Icon = item.icon;
@@ -54,7 +54,7 @@ export function AdminHeader() {
                <LogOut className="mr-2 h-4 w-4"/> Esci
             </Link>
 
-            {/* Mobile Menu Button (Visibile solo su mobile/tablet) */}
+            {/* Mobile Menu Button */}
             <div className="flex items-center md:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
