@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation'; // Importa usePathname
-import { Fish, Menu, X, ShoppingCart } from 'lucide-react';
+import { Fish, Menu, X, ShoppingCart, Lock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useCart } from '@/hooks/use-cart';
 
@@ -14,9 +14,8 @@ export function Header() {
   const cart = useCart();
   const [mounted, setMounted] = useState(false);
 
-  // SE SIAMO IN AREA ADMIN, NON MOSTRARE QUESTO HEADER
-  // Questo impedisce che l'header del cliente appaia sopra quello dell'admin
-  if (pathname && pathname.startsWith('/admin')) {
+  // SE SIAMO IN AREA ADMIN O LOGIN, NON MOSTRARE QUESTO HEADER
+  if (pathname && (pathname.startsWith('/admin') || pathname.startsWith('/login'))) {
     return null;
   }
 
@@ -63,19 +62,26 @@ export function Header() {
                 </Link>
               ))}
             </nav>
+            
+            <div className="flex items-center gap-4 border-l border-white/20 pl-6">
+                <Link 
+                  href="/cart" 
+                  className="relative p-2 text-white hover:text-brand-yellow transition-colors"
+                  aria-label="Vai al carrello"
+                >
+                  <ShoppingCart className="h-6 w-6" />
+                  {cartItemCount > 0 && (
+                    <span className="absolute top-0 right-0 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold leading-none text-brand-blue bg-brand-yellow rounded-full border border-brand-blue transform translate-x-1/4 -translate-y-1/4">
+                      {cartItemCount}
+                    </span>
+                  )}
+                </Link>
 
-            <Link 
-              href="/cart" 
-              className="relative p-2 text-white hover:text-brand-yellow transition-colors"
-              aria-label="Vai al carrello"
-            >
-              <ShoppingCart className="h-7 w-7" />
-              {cartItemCount > 0 && (
-                <span className="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold leading-none text-brand-blue bg-brand-yellow rounded-full border border-brand-blue transform translate-x-1/4 -translate-y-1/4">
-                  {cartItemCount}
-                </span>
-              )}
-            </Link>
+                {/* Pulsante Admin (Lucchetto) Desktop */}
+                <Link href="/login" className="p-2 text-white/50 hover:text-brand-yellow transition-colors" title="Area Riservata">
+                    <Lock className="h-5 w-5" />
+                </Link>
+            </div>
           </div>
 
           <div className="flex items-center md:hidden gap-4">
@@ -114,13 +120,26 @@ export function Header() {
                   {item.name}
                 </Link>
               ))}
-              <Link
-                  href="/cart"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="px-4 py-3 text-base font-medium rounded-lg text-white hover:bg-brand-blue-light hover:text-brand-yellow flex items-center gap-3 mt-2 border-t border-brand-blue-light pt-4"
-                >
-                  <ShoppingCart className="h-5 w-5" /> Il tuo Carrello ({cartItemCount})
-                </Link>
+              
+              {/* Pulsanti Extra Mobile */}
+              <div className="grid grid-cols-2 gap-2 pt-4 mt-2 border-t border-brand-blue-light">
+                  <Link
+                    href="/cart"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="px-4 py-3 text-base font-medium rounded-lg text-white hover:bg-brand-blue-light hover:text-brand-yellow flex items-center justify-center gap-2 bg-brand-blue-dark/50"
+                  >
+                    <ShoppingCart className="h-5 w-5" /> Carrello ({cartItemCount})
+                  </Link>
+                  
+                  {/* Pulsante Admin (Lucchetto) Mobile */}
+                  <Link
+                    href="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="px-4 py-3 text-base font-medium rounded-lg text-white hover:bg-brand-blue-light hover:text-brand-yellow flex items-center justify-center gap-2 bg-brand-blue-dark/50"
+                  >
+                    <Lock className="h-5 w-5" /> Admin
+                  </Link>
+              </div>
             </nav>
           </div>
         )}

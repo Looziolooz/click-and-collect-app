@@ -2,31 +2,21 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(req: NextRequest) {
-  // Se non stiamo cercando di accedere a /admin, lascia passare
-  if (!req.nextUrl.pathname.startsWith('/admin')) {
-    return NextResponse.next();
-  }
+  const { pathname } = req.nextUrl;
 
-  // Leggiamo l'header di autorizzazione
-  const basicAuth = req.headers.get('authorization');
+  // Se l'utente sta cercando di accedere a /admin...
+  if (pathname.startsWith('/admin')) {
+    // Controlliamo se ha il cookie di sessione
+    const adminSession = req.cookies.get('admin_session');
 
-  if (basicAuth) {
-    const authValue = basicAuth.split(' ')[1];
-    const [user, pwd] = atob(authValue).split(':');
-
-    // CREDENZIALI ADMIN (Puoi cambiarle qui o metterle in .env)
-    if (user === 'vincenzo' && pwd === 'pesce2024') {
-      return NextResponse.next();
+    // Se NON ha il cookie, lo mandiamo alla pagina di login
+    if (!adminSession) {
+      const loginUrl = new URL('/login', req.url);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
-  // Se non autorizzato, chiedi password
-  return new NextResponse('Autenticazione Richiesta', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Area Riservata Pescheria"',
-    },
-  });
+  return NextResponse.next();
 }
 
 // Applica il middleware solo alle rotte che iniziano con /admin
